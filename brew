@@ -1,0 +1,13 @@
+#!/bin/bash
+
+NODE_PATH=/opt/node
+
+export PATH=$NODE_PATH/bin:$PATH
+
+if [ $# -gt 0 ]; then
+  for f in $@; do
+    cpp -P $f | coffee --stdio --print
+  done
+else
+  cpp -P | coffee --stdio --print
+fi
