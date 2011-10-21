@@ -30,20 +30,8 @@ func expandPath(fs http.Dir, name string) string {
   return filepath.Join(string(fs), filepath.FromSlash(path.Clean("/" + name)))
 }
 
-func brewStderrToJavaScript(stderr string) string {
-  var js string
-  lines := strings.Split(stderr, "\n")
-  for i := 0; i < len(lines); i++ {
-    if !strings.HasPrefix(lines[i], "    at") && len(lines[i]) > 0 {
-      js += fmt.Sprintf("console.error(\"%s\");\n",
-          strings.Replace(lines[i], "\"", "\\\"", -1))
-    }
-  }
-  return js
-}
-
-func brew(w http.ResponseWriter, filename string) os.Error {
-  // inter-proc pipe
+func expandSource(w http.ResponseWriter, filename string) os.Error {
+  // output pipe
   rp, wp, err := os.Pipe()
   if err != nil {
     return err
@@ -51,50 +39,24 @@ func brew(w http.ResponseWriter, filename string) os.Error {
   defer wp.Close()
   defer rp.Close()
 
-  // output pipe
-  ro, wo, err := os.Pipe()
-  if err != nil {
-    return err
-  }
-  defer ro.Close()
-  defer wo.Close()
-
-  // invoke cpp
   cppPath := "/usr/bin/cpp"
-  _, err = os.StartProcess(cppPath,
+  p, err := os.StartProcess(cppPath,
       []string{cppPath, "-P", filename},
       &os.ProcAttr{
         "",
         os.Environ(),
-        []*os.File{nil, wp, wo},
+        []*os.File{nil, wp, os.Stderr},
         nil})
   if err != nil {
     return err
   }
 
-  // we're done writing on this pipe
+  // we won't be writing this any more.
   wp.Close()
 
-  // give cpp's output to coffee
-  coffeePath := "/opt/node/bin/coffee"
-  p, err := os.StartProcess(coffeePath,
-      []string{coffeePath, "--stdio", "--print"},
-      &os.ProcAttr{
-        "",
-        []string{"PATH=/opt/node/bin"},
-        []*os.File{rp, wo, wo},
-        nil})
-  if err != nil {
-    return err
-  }
-
-  // we're done with these pipes
-  wo.Close()
-  rp.Close()
-
   var b bytes.Buffer
-  io.Copy(&b, ro)
-  ro.Close()
+  io.Copy(&b, rp)
+  rp.Close()
   s, err := p.Wait(0)
   if err != nil {
     return err
@@ -104,10 +66,11 @@ func brew(w http.ResponseWriter, filename string) os.Error {
   if s.WaitStatus.ExitStatus() == 0 {
     fmt.Fprintf(w, b.String())
   } else {
-    fmt.Fprintf(w, brewStderrToJavaScript(b.String()))
+    http.Error(w, "processor go boom", 500)
   }
 
   return nil
+
 }
 
 func (f *appServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -124,10 +87,10 @@ func (f *appServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
     return
   }
 
-  source := target[0:len(target) - len(scriptFileExtension)] + ".coffee"
+  source := target[0:len(target) - len(scriptFileExtension)] + ".c.js"
 
   // handle the special file.
-  err := brew(w, source)
+  err := expandSource(w, source)
   if err != nil {
     panic(err)
   }
