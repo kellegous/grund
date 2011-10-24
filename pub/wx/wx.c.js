@@ -19,6 +19,55 @@ function Rect(x, y, w, h) {
   this.y = y;
   this.w = w;
   this.h = h;
+  this.data = [];
+}
+Rect.prototype.contains = function(x, y) {
+  return x >= this.x
+    && y >= this.y
+    && x <= (this.x + this.w)
+    && y <= (this.y + this.h);
+}
+
+function buildModel(stations, width, height, size) {
+  // compute a function capable of transforming pts.
+  function transform(stations) {
+    var minY, maxY, minX, maxX;
+    minY = maxY = stations[0].lat
+    minX = maxX = stations[0].lon
+    stations.forEach(function(s) {
+      maxY = Math.max(maxY, s.lat);
+      minY = Math.min(minY, s.lat);
+      maxX = Math.max(maxX, s.lon);
+      minX = Math.min(minX, s.lon);
+    });
+    var f = width / (maxX - minX);
+    stations.forEach(function(s) {
+      s.x = (s.lon - minX) * f;
+      s.y = (maxY - s.lat) * f;
+    });
+    return stations;
+  }
+  // compute the list of rects.
+  function grid(stations, width, height, size) {
+    var grid = [];
+    var nx = ~~(width / size);  // number of rects along x
+    var ny = ~~(height / size); // number of rects along y
+    grid.length = nx * ny;
+    stations.forEach(function(s) {
+      var ix = ~~(s.x / size);
+      var iy = ~~(s.y / size);
+      var id = iy * nx + ix;
+      var rect = grid[id];
+      if (!rect)
+        rect = grid[id] = new Rect(ix * size, iy * size, size, size);
+      rect.data.push(s);
+    });
+    return {
+      rects: grid.filter(function(r) { return !!r; }),
+      stations: stations
+    };
+  }
+  return grid(transform(stations), width, height, size);
 }
 
 function layout(stations, width) {
@@ -46,23 +95,31 @@ function layout(stations, width) {
   });
 }
 
-function render(canvas, stations) {
+function render(canvas, model) {
   var ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  var objs = layout(stations, canvas.width);
+
   ctx.fillStyle = '#ff0';
-  objs.forEach(function(o) {
+  model.stations.forEach(function(o) {
     ctx.beginPath();
     ctx.arc(o.x, o.y, 2, 0, 2 * Math.PI, true);
     ctx.closePath();
     ctx.fill();
   });
+
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+  model.rects.forEach(function(o) {
+    ctx.fillRect(o.x, o.y, o.w - 1, o.h - 1);
+  });
+
 }
 
 function main() {
   xhrGet('stations.json',
     function(r) {
-      render(createCanvas(query('#screen')), JSON.parse(r.responseText));
+      var canvas = createCanvas(query('#screen'));
+      var model = buildModel(JSON.parse(r.responseText), canvas.width, canvas.height, 20);
+      render(canvas, model);
     },
     function(r) {
       console.error(r);
