@@ -62,6 +62,13 @@ function buildModel(stations, width, height, size) {
         rect = grid[id] = new Rect(ix * size, iy * size, size, size);
       rect.data.push(s);
     });
+    for (var i = 0, n = grid.length; i < n; ++i) {
+      if (!grid[i])
+        continue;
+      var ix = i % nx;
+      var iy = ~~(i / nx);
+      console.log(i + " ==> " + ix + ", " + iy); 
+    }
     return {
       rects: grid.filter(function(r) { return !!r; }),
       stations: stations
@@ -111,7 +118,6 @@ function render(canvas, model) {
   model.rects.forEach(function(o) {
     ctx.fillRect(o.x, o.y, o.w - 1, o.h - 1);
   });
-
 }
 
 function main() {

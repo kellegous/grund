@@ -64,7 +64,7 @@ func expandSource(w http.ResponseWriter, filename string) os.Error {
 
   w.Header().Set("Content-Type", "text/javascript")
   if s.WaitStatus.ExitStatus() == 0 {
-    fmt.Fprintf(w, b.String())
+    fmt.Fprintln(w, b.String())
   } else {
     http.Error(w, "processor go boom", 500)
   }
