@@ -89,6 +89,12 @@ func (f *appServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
   source := target[0:len(target) - len(scriptFileExtension)] + ".c.js"
 
+  // Make sure the source exists.
+  if _, err := os.Stat(source); err != nil {
+    http.NotFound(w, r)
+    return
+  }
+
   // handle the special file.
   err := expandSource(w, source)
   if err != nil {
@@ -100,6 +106,7 @@ var addr = flag.String("addr", ":8777", "http service address")
 
 func main() {
   http.Handle("/", newAppServer(http.Dir("pub")))
+  fmt.Printf("Listening %s\n", *addr)
   err := http.ListenAndServe(*addr, nil)
   if (err != nil) {
     log.Fatal("ListenAndServe: ", err)
