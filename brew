@@ -1,9 +1,15 @@
 #!/bin/bash
 
-NODE_PATH=/opt/node
+function check() {
+  which $1 > /dev/null
+  if [ $? -ne 0 ]; then
+    echo "$1 missing from your PATH" 1>&2
+    exit 1
+  fi
+}
 
-export PATH=$NODE_PATH/bin:$PATH
-
+check "node"
+check "coffee"
 if [ $# -gt 0 ]; then
   for f in $@; do
     cpp -P $f | coffee --stdio --print
