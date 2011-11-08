@@ -1,0 +1,9 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg" version="1.1"
+  xmlns:xlink="http://www.w3.org/1999/xlink">
+  <!--
+  <polygon points="100,10 40,180 190,60 10,60 160,180 100,10"
+  style="fill:lime;stroke:purple;stroke-width:5;fill-rule:evenodd;" />
+  -->
+  <script type="text/javascript" xlink:href="hex.js"></script>
+</svg> 
