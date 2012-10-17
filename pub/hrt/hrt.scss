@@ -1,0 +1,42 @@
+body {
+  font-size: 16pt;
+  background-color: #333;
+  font-family: 'Raleway', sans-serif;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+#a {
+  width: 35px;
+  height: 30px;
+  background: datauri("hw.png") no-repeat 50% 50%;
+  margin: 10px auto;
+  position: relative;
+}
+
+#a:hover {
+  background: datauri("hr.png") no-repeat 50% 50%;
+}
+
+#a div {
+  display: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: datauri("hr.png") no-repeat 50% 50%;
+  background-size: contain;
+}
+
+#c {
+  font-size: 72pt;
+  color: #fff;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.6);
+  margin-top: 200px;
+  text-align: center;
+}
