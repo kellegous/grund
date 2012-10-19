@@ -14,7 +14,7 @@ body {
   width: 35px;
   height: 30px;
   background: datauri("hw.png") no-repeat 50% 50%;
-  margin: 10px auto;
+  margin: 200px auto 10px auto;
   position: relative;
 }
 
@@ -34,9 +34,8 @@ body {
 }
 
 #c {
-  font-size: 72pt;
+  font-size: 18pt;
   color: #fff;
   text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.6);
-  margin-top: 200px;
   text-align: center;
 }
