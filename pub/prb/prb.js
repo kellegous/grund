@@ -86,12 +86,6 @@ var m = d3.range(1, N + 1).reduce(function(c, d, i) {
   return (e > c[1]) ? [i + 1, e] : c;
 }, [0, -1]);
 
-console.log(m[0]);
-console.log(m[1]);
-console.log('24 => ' + ExpectedValue(24, N));
-console.log('25 => ' + ExpectedValue(25, N));
-console.log('26 => ' + ExpectedValue(26, N));
-
 g.svg.append('line')
   .attr('stroke', '#ccc')
   .attr('fill', 'none')
