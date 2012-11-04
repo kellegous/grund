@@ -8,15 +8,30 @@
       rel='stylesheet' type='text/css'>
 </head>
 <body>
-  <p>
-  This is just the <a href="http://en.wikipedia.org/wiki/Birthday_problem">birthday problem</a> in disguise, so the probability of winning as function of the number of friends you call looks like this.
-  </p>
+  <div class="p">
+  On Google+, I asked the following question:
+  <blockquote>
+    I'm going to run this contest where I call N of your friends and ask them to pick a number between 1 and 100. If any of your friends pick the same number, I give you $100. If none of them pick the same number, I give you nothing. Each friend will cost you $1. How many friends do you want me to call?
+    <br>
+    <a href="https://plus.google.com/u/0/108767398608071205202/posts/i4S1Rv4CquZ">
+      original post
+    </a>
+  </blockquote>
+  The problem got stuck in my head on that Sunday because I was trying to think of
+  problems that would demonstrate the extent to which our intuition misleads us when
+  a question involves expected value. It's not a great example, but it stuck in my head
+  until I sat down and did the math.
+  </div>
+
+  <div class="p">
+  This is actually just the class <a href="http://en.wikipedia.org/wiki/Birthday_problem">birthday problem</a> with an expected value component tacked on. If you look at that Wikipedia page, you'll understand why the probability of winning looks like this. The reason this is a &ldquo;classic&rdquo; is because the probability grows much faster that intuition would suggest.
+  </div>
   <div class="g" id="g1">
   </div>
 
-  <p>
-  If I then use that to compute the expected value as P(win) * $100 - cost (# of friends). Is it not correct to conclude that I want to call <strong>25 friends</strong>, which gives me a 95% chance of winning at a cost of just $25 (with an expected value of just over $71)?
-  </p>
+  <div class="p">
+  To determine the number of friends to call, we're looking to maximize <a href="http://en.wikipedia.org/wiki/Expected_value">expected value</a>. That's just P(win) * $100 - cost (# of friends). Plotting the expected value, it is clear that there is a point where adding more friends will not do much to increase the chance of winning, but it will cost more. That sweet spot is at around <strong>25 friends</strong>. That makes the cost, of course, is a mere $25 and the chance of winning is 95%.
+  </div>
   <div class="g" id="g2">
   </div>
 

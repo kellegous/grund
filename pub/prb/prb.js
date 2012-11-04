@@ -21,7 +21,7 @@ var margin = {top: 20, right: 20, bottom: 30, left: 50};
 var width = 600 - margin.left - margin.right;
 var height = 400 - margin.top - margin.bottom;
 
-var Graph = function(n, id, y, data) {
+var Graph = function(n, id, y, data, yAxisTickValues) {
   var x = d3.scale.linear()
     .domain([1, n])
     .range([0, width]);
@@ -32,6 +32,9 @@ var Graph = function(n, id, y, data) {
   var yAxis = d3.svg.axis()
     .scale(y)
     .orient('left');
+  if (yAxisTickValues) {
+    yAxis.tickValues(yAxisTickValues);
+  }
 
   var svg = d3.select(id)
     .append('svg:svg')
@@ -71,7 +74,8 @@ Graph(N, '#g1',
     .range([height, 0]),
   d3.range(1, N + 1).map(function(d) {
     return ProbOfWin(d, N);
-  }));
+  }),
+  [0.0, 0.5, 1.0]);
 
 var g = Graph(N, '#g2',
   d3.scale.linear()
