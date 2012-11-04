@@ -1,0 +1,39 @@
+body {
+  font-family: 'Open Sans', san-serif;
+  font-weight: 300;
+  font-size: 14pt;
+}
+
+p {
+  margin: 40px auto 20px auto;
+  width: 600px;
+
+  a {
+    color: #000;
+    text-decoration: underline;
+
+    &:hover {
+      color: #09f;
+    }
+  }
+}
+
+.g {
+  width: 600px;
+  height: 400px;
+  border: 1px solid #eee;
+  margin: 10px auto 100px auto;
+  position: relative;
+}
+
+.xaxis, .yaxis {
+  line {
+    fill: none;
+    stroke: #999;
+    shape-rendering: crispEdges;
+    stroke-width: 1px;
+  }
+  path {
+    display: none;
+  }
+}
