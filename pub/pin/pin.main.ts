@@ -1,25 +1,7 @@
 /// <reference path="../../lib/jquery.d.ts" />
 
 
-/*
-this is pretty much all wrong.
-
-- do not allow expansions in the first iteration
-
-maybe we are simply packing 4x4 rows??
-
-sort our list by max(X, Y)
-take first fit (which is next)
-
-
-sort our list of pins by decreasing height
-sort out list of pins by decreasing width
-take first available from height collection
-while has space:
-  take first fit from width collection
-  plug any missing hole
-
-*/
+// todo: expand this this for arbitrary grids
 
 interface Rect {
   X : number;
@@ -124,6 +106,9 @@ var GridOf = function(size : number) : (views : View[]) => void {
 
   var Place = function(a : View[], b : View[], r : Rect) {
     var reg : Size;
+
+    // find something w/ proper aspect ratio or just force fit something
+    // if there isn't a match
     var fit = FindFit(a, r);
     if (fit) {
       reg = fit.Size;
@@ -138,9 +123,12 @@ var GridOf = function(size : number) : (views : View[]) => void {
       // fit.Elem.css('border', '2px dashed #f00');
     }
 
+    // place that as an anchor
     Position(fit, r.X, r.Y, reg.X, reg.Y);
 
+    // if we have space to the right, place stuff there
     if (reg.X < r.W) {
+      // notice that a and b are swapped to provide visual variety
       Place(b, a, {
         X : r.X + reg.X,
         Y : r.Y,
@@ -149,6 +137,7 @@ var GridOf = function(size : number) : (views : View[]) => void {
       });
     }
 
+    // if we have space below us, place stuff there
     if (reg.Y < r.H) {
       Place(b, a, {
         X : r.X,
@@ -166,7 +155,7 @@ var GridOf = function(size : number) : (views : View[]) => void {
       v.Used = false;
     });
 
-    // sort by width
+    // sort by width (todo: doesn't give good variety)
     // var byWidth = views.slice(0).sort((a, b) => {
     //   return b.Size.X - a.Size.X;
     // });
@@ -180,18 +169,36 @@ var GridOf = function(size : number) : (views : View[]) => void {
     var byHeight = views;
 
     var r = {X : 0, Y : 0, W : 4 * size, H : 4 * size};
+
+    var c = 0;
     while (FindUnused(byHeight) != null) {
       var fit = FindFit(byHeight, r);
       if (!fit)
         return;
-      Position(fit, r.X, r.Y, fit.Size.X, fit.Size.Y);
-      Place(byWidth, byHeight, {
-        X : fit.Size.X,
-        Y : r.Y,
-        W : r.W - fit.Size.X,
-        H : fit.Size.Y
-      });
+
+      // alternate between anchoring the left and right sides of a region with a
+      // fitting object.
+      if ((c & 1) == 0) {
+        // start on the left
+        Position(fit, r.X, r.Y, fit.Size.X, fit.Size.Y);
+        Place(byWidth, byHeight, {
+          X : fit.Size.X,
+          Y : r.Y,
+          W : r.W - fit.Size.X,
+          H : fit.Size.Y
+        });
+      } else {
+        // start on the right
+        Position(fit, r.W - fit.Size.X, r.Y, fit.Size.X, fit.Size.Y);
+        Place(byWidth, byHeight, {
+          X : r.X,
+          Y : r.Y,
+          W : r.W - fit.Size.X,
+          H : fit.Size.Y
+        });
+      }
       r.Y += fit.Size.Y;
+      c++;
     }
   };
 }
