@@ -12,14 +12,18 @@ body {
   background-color: #fff;
   color: #999;
   border-bottom: 1px solid #eee;
+  text-shadow: 2px 2px 5px rgba(0,0,0,0.2);
 
   &::-webkit-input-placeholder {
     color: #eee;
+    text-shadow:none;
   }
 }
 
 #ent {
-  font-size: 100px;
+  font-size: 450px;
+  line-height: 400px;
   text-align: center;
   color: #999;
+  text-shadow: 2px 2px 5px rgba(0,0,0,0.2);
 }
