@@ -1,0 +1,25 @@
+body {
+  margin: 0;
+  text-align: center;
+}
+
+#pwd {
+  padding: 40px;
+  margin: 20px 0;
+  font-size: 100px;
+  border: none;
+  outline: none;
+  background-color: #fff;
+  color: #999;
+  border-bottom: 1px solid #eee;
+
+  &::-webkit-input-placeholder {
+    color: #eee;
+  }
+}
+
+#ent {
+  font-size: 100px;
+  text-align: center;
+  color: #999;
+}

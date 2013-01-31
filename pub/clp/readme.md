@@ -1,0 +1,1 @@
+tried to report a clipboard bug but those guys just ignored me.
