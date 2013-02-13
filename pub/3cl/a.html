@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>3cl - a</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <link href='http://fonts.googleapis.com/css?family=Raleway:400,100,200'
+      rel='stylesheet' type='text/css'>
+  <style>
+  body {
+    background-color: #000;
+  }
+  #c {
+    margin: 40px auto 0 auto;
+    display: block;
+  }
+  </style>
+</head>
+<body>
+  <canvas id="c" width="500" height="500"></canvas>
+  <script src="glMatrix-0.9.5.min.js"></script>
+  <script id="shader-fs" type="x-shader/x-fragment">
+  precision mediump float;
+  void main(void) {
+    gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+  }
+  </script>
+
+  <script id="shader-vs" type="x-shader/x-vertex">
+  attribute vec3 aVertexPosition;
+
+  uniform mat4 uMVMatrix;
+  uniform mat4 uPMatrix;
+
+  void main(void) {
+    gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+  }
+  </script>
+
+  <script>
+  (function() {
+
+  // Load a shader from an element and compile it
+  var ShaderFrom = function(gl, id) {
+    var node = document.getElementById(id);
+    var text = node.textContent;
+    var shdr = node.type == 'x-shader/x-fragment'
+      ? gl.createShader(gl.FRAGMENT_SHADER)
+      : gl.createShader(gl.VERTEX_SHADER);
+
+    gl.shaderSource(shdr, text);
+    gl.compileShader(shdr);
+
+    if (!gl.getShaderParameter(shdr, gl.COMPILE_STATUS)) {
+      throw new Error(gl.getShaderInfoLog(shdr));
+    }
+
+    return shdr;
+  };
+
+  var mvMatrix = mat4.create();
+  var pMatrix = mat4.create();
+
+  var SetupMatrixUniforms = function() {
+    // setup matrix uniforms
+    gl.uniformMatrix4fv(sp.pMatrixUniform, false, pMatrix);
+    gl.uniformMatrix4fv(sp.mvMatrixUniform, false, mvMatrix);
+  };
+
+  var canvas = document.querySelector('#c');
+  var gl = canvas.getContext("experimental-webgl");
+  gl.viewportWidth = canvas.width;
+  gl.viewportHeight = canvas.height;
+
+  // setup the shaders
+  var fs = ShaderFrom(gl, 'shader-fs');
+  var vs = ShaderFrom(gl, 'shader-vs');
+  var sp = gl.createProgram();
+  gl.attachShader(sp, vs);
+  gl.attachShader(sp, fs);
+  gl.linkProgram(sp);
+
+  if (!gl.getProgramParameter(sp, gl.LINK_STATUS)) {
+    throw new Error('could not init shaders');
+  }
+
+  gl.useProgram(sp);
+
+  sp.vertexPositionAttribute = gl.getAttribLocation(sp, "aVertexPosition");
+  gl.enableVertexAttribArray(sp.vertexPositionAttribute);
+  sp.pMatrixUniform = gl.getUniformLocation(sp, 'uPMatrix');
+  sp.mvMatrixUniform = gl.getUniformLocation(sp, 'uMVMatrix');
+
+  // init buffers
+
+  // create the buffer for the triangle
+  var tvpb = gl.createBuffer();
+  // make the current array buffer point to tvpb
+  gl.bindBuffer(gl.ARRAY_BUFFER, tvpb);
+  var vertices = [
+     0.0,  1.0,  0.0,
+    -1.0, -1.0,  0.0,
+     1.0, -1.0,  0.0 ];
+  // assign the vertices
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+  // this is just a convenience for our JS code and is not used in webgl
+  tvpb.itemSize = 3;
+  tvpb.numItems = 3;
+
+  // create the buffer for the square
+  var svpb = gl.createBuffer();
+  // make svpb the current array buffer
+  gl.bindBuffer(gl.ARRAY_BUFFER, svpb);
+  vertices = [
+     1.0,  1.0,  0.0,
+    -1.0,  1.0,  0.0,
+     1.0, -1.0,  0.0,
+    -1.0, -1.0,  0.0 ];
+  // assign the vertices to the current array buffer (svpb)
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+  svpb.itemSize = 3;
+  svpb.numItems = 4;
+
+  gl.clearColor(0.0, 0.0, 0.0, 1.0);
+  gl.enable(gl.DEPTH_TEST);
+
+  // draw the scene
+  gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
+  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+  //
+  mat4.perspective(45, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0, pMatrix);
+
+  mat4.identity(mvMatrix);
+
+  mat4.translate(mvMatrix, [-1.5, 0.0, -7.0]);
+  gl.bindBuffer(gl.ARRAY_BUFFER, tvpb);
+  gl.vertexAttribPointer(sp.vertexPositionAttribute,
+    tvpb.itemSize, gl.FLOAT, false, 0, 0);
+  SetupMatrixUniforms();
+  gl.drawArrays(gl.TRIANGLES, 0, tvpb.numItems);
+
+  mat4.translate(mvMatrix, [3.0, 0.0, 0.0]);
+  gl.bindBuffer(gl.ARRAY_BUFFER, svpb);
+  gl.vertexAttribPointer(sp.vertexPositionAttribute,
+    svpb.itemSize, gl.FLOAT, false, 0, 0);
+  SetupMatrixUniforms();
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, svpb.numItems);
+
+  console.log(gl, fs, vs, sp, tvpb, svpb);
+
+  })();
+  </script>
+</body>
+</html>
