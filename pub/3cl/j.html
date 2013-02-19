@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>3cl - j</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <link href='http://fonts.googleapis.com/css?family=Raleway:400,100,200'
+      rel='stylesheet' type='text/css'>
+  <style>
+  body {
+    font-family: HelveticaNeue-Light;
+    background-color: #000;
+    color: #fff;
+  }
+  #c {
+    margin: 40px auto 0 auto;
+    display: block;
+  }
+  </style>
+</head>
+<body>
+  <canvas id="c" width="500" height="500"></canvas>
+
+  <script src="glMatrix-0.9.5.min.js"></script>
+  <script src="https://www.khronos.org/registry/webgl/sdk/debug/webgl-debug.js"></script>
+
+  <script id="shader-fs" type="x-shader/x-fragment">
+    precision mediump float;
+
+    varying vec2 vTextureCoord;
+
+    uniform sampler2D uSampler;
+
+    void main(void) {
+      gl_FragColor = texture2D(uSampler, vec2(vTextureCoord.s, vTextureCoord.t));
+    }
+  </script>
+
+  <script id="shader-vs" type="x-shader/x-vertex">
+    attribute vec3 aVertexPosition;
+    attribute vec2 aTextureCoord;
+
+    uniform mat4 uMVMatrix;
+    uniform mat4 uPMatrix;
+
+    varying vec2 vTextureCoord;
+
+    void main(void) {
+      gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+      vTextureCoord = aTextureCoord;
+    }
+  </script>
+
+  <script>
+    // Load a shader from an element and compile it
+    var ShaderFrom = function(gl, id) {
+      var node = document.getElementById(id);
+      var text = node.textContent;
+      var shdr = node.type == 'x-shader/x-fragment'
+        ? gl.createShader(gl.FRAGMENT_SHADER)
+        : gl.createShader(gl.VERTEX_SHADER);
+
+      gl.shaderSource(shdr, text);
+      gl.compileShader(shdr);
+
+      if (!gl.getShaderParameter(shdr, gl.COMPILE_STATUS)) {
+        throw new Error(gl.getShaderInfoLog(shdr));
+      }
+
+      return shdr;
+    };
+
+
+    var ShaderProgram = function(gl) {
+      var fs = ShaderFrom(gl, 'shader-fs');
+      var vs = ShaderFrom(gl, 'shader-vs');
+      var sp = gl.createProgram();
+
+      gl.attachShader(sp, vs);
+      gl.attachShader(sp, fs);
+      gl.linkProgram(sp);
+
+      if (!gl.getProgramParameter(sp, gl.LINK_STATUS)) {
+        throw new Error('shader splat.');
+      }
+
+      gl.useProgram(sp);
+
+      sp.vertexPositionAttribute = gl.getAttribLocation(sp, 'aVertexPosition');
+      gl.enableVertexAttribArray(sp.vertexPositionAttribute);
+
+      sp.textureCoordAttribute = gl.getAttribLocation(sp, 'aTextureCoord');
+      gl.enableVertexAttribArray(sp.textureCoordAttribute);
+
+      sp.pMatrixUniform = gl.getUniformLocation(sp, 'uPMatrix');
+      sp.mvMatrixUniform = gl.getUniformLocation(sp, 'uMVMatrix');
+
+      sp.samplerUniform = gl.getUniformLocation(sp, 'uSampler');
+
+      return sp;
+    };
+
+
+    var LoadWorld = function(gl, cb) {
+      var Parse = function(data) {
+        var lines = data.split('\n'),
+            vertexCount = 0,
+            vertexPositions = [],
+            vertexTextureCoords = [];
+        lines.forEach(function(line) {
+          var vals = line.replace(/^\s+/, '').split(/\s+/);
+          if (vals.length != 5 || vals[0] == '//') {
+            return;
+          }
+
+          vertexPositions.push(parseFloat(vals[0]));
+          vertexPositions.push(parseFloat(vals[1]));
+          vertexPositions.push(parseFloat(vals[2]));
+
+          vertexTextureCoords.push(parseFloat(vals[3]));
+          vertexTextureCoords.push(parseFloat(vals[4]));
+
+          vertexCount++;
+        });
+
+        var wvpb = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, wvpb);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertexPositions),
+          gl.STATIC_DRAW);
+        wvpb.itemSize = 3;
+        wvpb.numItems = vertexCount;
+
+        var wvtb = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, wvtb);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertexTextureCoords),
+          gl.STATIC_DRAW);
+        wvtb.itemSize  = 2;
+        wvtb.numItems = vertexCount;
+
+        cb({ wvpb: wvpb, wvtb: wvtb });
+      };
+      var xhr = new XMLHttpRequest;
+      xhr.open('GET', 'world.txt');
+      xhr.onreadystatechange = function() {
+        if (xhr.readyState == 4) {
+          Parse(xhr.responseText);
+        }
+      };
+      xhr.send();
+    };
+
+
+    var Radians = function(deg) {
+      return deg * Math.PI / 180;
+    };
+
+
+    var LoadTexture = function(gl, url, cb) {
+      var tex = gl.createTexture();
+      tex.image = new Image;
+      tex.image.addEventListener('load', function(e) {
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+        gl.bindTexture(gl.TEXTURE_2D, tex);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, tex.image);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.bindTexture(gl.TEXTURE_2D, null);
+        cb(tex);
+      }, false);
+      tex.image.src = url;
+    };
+
+
+    var SetMatrixUniforms = function(gl) {
+      gl.uniformMatrix4fv(sp.pMatrixUniform, false, pMatrix);
+      gl.uniformMatrix4fv(sp.mvMatrixUniform, false, mvMatrix);
+    };
+
+
+    var UpdateKeys = function() {
+      if (keyState[33]) {
+        // page up
+        pitchRate = 0.1;
+      } else if (keyState[34]) {
+        pitchRate = -0.1;
+      } else {
+        pitchRate = 0;
+      }
+
+      if (keyState[37] || keyState[65]) {
+        // left cursor key or A
+        yawRate = 0.1;
+      } else if (keyState[39] || keyState[68]) {
+        // right cursor key or D
+        yawRate = -0.1;
+      } else {
+        yawRate = 0;
+      }
+
+      if (keyState[38] || keyState[87]) {
+        // up cursor or W
+        speed = 0.003;
+      } else if (keyState[40] || keyState[83]) {
+        speed = -0.003;
+      } else {
+        speed = 0;
+      }
+    };
+
+
+    var TickDidTock = function() {
+      var wvtb = world.wvtb,
+          wvpb = world.wvpb;
+
+      requestAnimationFrame(TickDidTock);
+      UpdateKeys();
+
+      // draw scene
+      gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
+      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+      mat4.perspective(45, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0, pMatrix);
+
+      mat4.identity(mvMatrix);
+
+      mat4.rotate(mvMatrix, Radians(-pitch), [1, 0, 0]);
+      mat4.rotate(mvMatrix, Radians(-yaw), [0, 1, 0]);
+      mat4.translate(mvMatrix, [-xPos, -yPos, - zPos]);
+
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, texture);
+      gl.uniform1i(sp.samplerUniform, 0);
+
+      gl.bindBuffer(gl.ARRAY_BUFFER, wvtb);
+      gl.vertexAttribPointer(sp.textureCoordAttribute, wvtb.itemSize,
+        gl.FLOAT, false, 0, 0);
+
+      gl.bindBuffer(gl.ARRAY_BUFFER, wvpb);
+      gl.vertexAttribPointer(sp.vertexPositionAttribute, wvpb.itemSize,
+        gl.FLOAT, false, 0, 0);
+
+      SetMatrixUniforms(gl);
+      gl.drawArrays(gl.TRIANGLES, 0, wvpb.numItems);
+
+      var now = Date.now();
+      if (lastTime != 0) {
+        var elapsed = now - lastTime;
+        if (speed != 0) {
+          xPos -= Math.sin(Radians(yaw)) * speed * elapsed;
+          zPos -= Math.cos(Radians(yaw)) * speed * elapsed;
+
+          joggingAngle += elapsed * 0.6;
+          yPos = Math.sin(Radians(joggingAngle)) / 20 + 0.4;
+        }
+
+        yaw += yawRate * elapsed;
+        pitch += pitchRate * elapsed;
+      }
+      lastTime = now;
+    };
+
+
+    var canvas = document.querySelector('#c'),
+        gl = canvas.getContext('experimental-webgl'),
+        sp = ShaderProgram(gl),
+        texture = null,
+        world = null,
+        mvMatrix = mat4.create(),
+        pMatrix = mat4.create(),
+        keyState = {},
+        pitch = 0,
+        pitchRate = 0,
+        yaw = 0,
+        yawRate = 0,
+        xPos = 0,
+        yPos = 0.4,
+        zPos = 0,
+        speed = 0,
+        lastTime = 0,
+        joggingAngle = 0;
+
+    gl.viewportWidth = canvas.width;
+    gl.viewportHeight = canvas.height;
+
+    document.addEventListener('keydown', function(e) {
+      keyState[e.keyCode] = true;
+    }, false);
+
+    document.addEventListener('keyup', function(e) {
+      delete keyState[e.keyCode];
+    }, false);
+
+    LoadTexture(gl, 'pencil.png', function(tex) {
+      texture = tex;
+      LoadWorld(gl, function(buffers) {
+        world = buffers;
+        gl.clearColor(0.0, 0.0, 0.0, 1.0);
+        gl.enable(gl.DEPTH_TEST);
+        TickDidTock();
+      });
+    });
+
+    console.log(gl, sp);
+  </script>
+</body>
+</html>
