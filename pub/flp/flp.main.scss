@@ -38,8 +38,39 @@ body {
   }
 }
 
+@-moz-keyframes flippy {
+  0% {
+    -moz-transform: rotateY(0deg) scale(1.0);
+  }
+  35% {
+    -moz-transform: rotateY(0deg) scale($scale);
+  }
+  65% {
+    -moz-transform: rotateY(180deg) scale($scale);
+  }
+  100% {
+    -moz-transform: rotateY(180deg) scale(1.0);
+  }
+}
+
+@-moz-keyframes yppilf {
+  0% {
+    -moz-transform: rotateY(180deg) scale(1.0);
+  }
+  35% {
+    -moz-transform: rotateY(180deg) scale($scale);
+  }
+  65% {
+    -moz-transform: rotateY(0deg) scale($scale);
+  }
+  100% {
+    -moz-transform: rotateY(0deg) scale(1.0);
+  }
+}
+
 #root {
   -webkit-perspective: 2000;
+  -moz-perspective: 2000;
   position: absolute;
   top: 0;
   left: 0;
@@ -60,11 +91,19 @@ body {
   -webkit-animation-timing-function: ease-in-out;
   -webkit-animation-fill-mode: both;
 
+
+  -moz-animation-duration: 1.5s;
+  -moz-transform-style: preserve-3d;
+  -moz-animation-timing-function: ease-in-out;
+  -moz-animation-fill-mode: both;
+
   &.enflip {
     -webkit-animation-name: flippy;
+    -moz-animation-name: flippy;
   }
   &.deflip {
     -webkit-animation-name: yppilf;
+    -moz-animation-name: yppilf;
   }
 }
 
@@ -79,6 +118,7 @@ body {
   border-radius: 4px;
 
   -webkit-backface-visibility: hidden;
+  -moz-backface-visibility: hidden;
 
   h1 {
     text-align: center;
@@ -136,6 +176,7 @@ body {
 
 #r {
   -webkit-transform: rotateY(180deg);
+  -moz-transform: rotateY(180deg);
   background: url(bk.jpg) no-repeat top left;
   background-size: cover;
 }
