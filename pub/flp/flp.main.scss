@@ -1,4 +1,4 @@
-$margin: 50px;
+$scale: 0.8;
 
 html {
   background: url('carbon_fibre.png');
@@ -10,39 +10,31 @@ body {
 
 @-webkit-keyframes flippy {
   0% {
-    -webkit-transform: rotateY(0deg);
-    margin: 0;
+    -webkit-transform: rotateY(0deg) scale(1.0);
   }
   35% {
-    -webkit-transform: rotateY(0deg);
-    margin: $margin;
+    -webkit-transform: rotateY(0deg) scale($scale);
   }
   65% {
-    -webkit-transform: rotateY(180deg);
-    margin: $margin;
+    -webkit-transform: rotateY(180deg) scale($scale);
   }
   100% {
-    -webkit-transform: rotateY(180deg);
-    margin: 0;
+    -webkit-transform: rotateY(180deg) scale(1.0);
   }
 }
 
 @-webkit-keyframes yppilf {
   0% {
-    -webkit-transform: rotateY(180deg);
-    margin: 0;
+    -webkit-transform: rotateY(180deg) scale(1.0);
   }
   35% {
-    -webkit-transform: rotateY(180deg);
-    margin: $margin;
+    -webkit-transform: rotateY(180deg) scale($scale);
   }
   65% {
-    -webkit-transform: rotateY(0deg);
-    margin: $margin;
+    -webkit-transform: rotateY(0deg) scale($scale);
   }
   100% {
-    -webkit-transform: rotateY(0deg);
-    margin: 0;
+    -webkit-transform: rotateY(0deg) scale(1.0);
   }
 }
 
