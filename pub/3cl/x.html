@@ -2,27 +2,67 @@
 <html>
 
 <head>
-<title>Learning WebGL &mdash; lesson 12</title>
+<title>Learning WebGL &mdash; lesson 14</title>
 <meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
 
 <script type="text/javascript" src="glMatrix-0.9.5.min.js"></script>
 <script type="text/javascript" src="webgl-utils.js"></script>
 
-<script id="shader-fs" type="x-shader/x-fragment">
+<script id="per-fragment-lighting-fs" type="x-shader/x-fragment">
     precision mediump float;
 
     varying vec2 vTextureCoord;
-    varying vec3 vLightWeighting;
+    varying vec3 vTransformedNormal;
+    varying vec4 vPosition;
+
+    uniform float uMaterialShininess;
+
+    uniform bool uShowSpecularHighlights;
+    uniform bool uUseLighting;
+    uniform bool uUseTextures;
+
+    uniform vec3 uAmbientColor;
+
+    uniform vec3 uPointLightingLocation;
+    uniform vec3 uPointLightingSpecularColor;
+    uniform vec3 uPointLightingDiffuseColor;
 
     uniform sampler2D uSampler;
 
+
     void main(void) {
-        vec4 textureColor = texture2D(uSampler, vec2(vTextureCoord.s, vTextureCoord.t));
-        gl_FragColor = vec4(textureColor.rgb * vLightWeighting, textureColor.a);
+        vec3 lightWeighting;
+        if (!uUseLighting) {
+            lightWeighting = vec3(1.0, 1.0, 1.0);
+        } else {
+            vec3 lightDirection = normalize(uPointLightingLocation - vPosition.xyz);
+            vec3 normal = normalize(vTransformedNormal);
+
+            float specularLightWeighting = 0.0;
+            if (uShowSpecularHighlights) {
+                vec3 eyeDirection = normalize(-vPosition.xyz);
+                vec3 reflectionDirection = reflect(-lightDirection, normal);
+
+                specularLightWeighting = pow(max(dot(reflectionDirection, eyeDirection), 0.0), uMaterialShininess);
+            }
+
+            float diffuseLightWeighting = max(dot(normal, lightDirection), 0.0);
+            lightWeighting = uAmbientColor
+                + uPointLightingSpecularColor * specularLightWeighting
+                + uPointLightingDiffuseColor * diffuseLightWeighting;
+        }
+
+        vec4 fragmentColor;
+        if (uUseTextures) {
+            fragmentColor = texture2D(uSampler, vec2(vTextureCoord.s, vTextureCoord.t));
+        } else {
+            fragmentColor = vec4(1.0, 1.0, 1.0, 1.0);
+        }
+        gl_FragColor = vec4(fragmentColor.rgb * lightWeighting, fragmentColor.a);
     }
 </script>
 
-<script id="shader-vs" type="x-shader/x-vertex">
+<script id="per-fragment-lighting-vs" type="x-shader/x-vertex">
     attribute vec3 aVertexPosition;
     attribute vec3 aVertexNormal;
     attribute vec2 aTextureCoord;
@@ -31,30 +71,16 @@
     uniform mat4 uPMatrix;
     uniform mat3 uNMatrix;
 
-    uniform vec3 uAmbientColor;
-
-    uniform vec3 uPointLightingLocation;
-    uniform vec3 uPointLightingColor;
-
-    uniform bool uUseLighting;
-
     varying vec2 vTextureCoord;
-    varying vec3 vLightWeighting;
+    varying vec3 vTransformedNormal;
+    varying vec4 vPosition;
+
 
     void main(void) {
-        vec4 mvPosition = uMVMatrix * vec4(aVertexPosition, 1.0);
-        gl_Position = uPMatrix * mvPosition;
+        vPosition = uMVMatrix * vec4(aVertexPosition, 1.0);
+        gl_Position = uPMatrix * vPosition;
         vTextureCoord = aTextureCoord;
-
-        if (!uUseLighting) {
-            vLightWeighting = vec3(1.0, 1.0, 1.0);
-        } else {
-            vec3 lightDirection = normalize(uPointLightingLocation - mvPosition.xyz);
-
-            vec3 transformedNormal = uNMatrix * aVertexNormal;
-            float directionalLightWeighting = max(dot(transformedNormal, lightDirection), 0.0);
-            vLightWeighting = uAmbientColor + uPointLightingColor * directionalLightWeighting;
-        }
+        vTransformedNormal = uNMatrix * aVertexNormal;
     }
 </script>
 
@@ -115,8 +141,8 @@
     var shaderProgram;
 
     function initShaders() {
-        var fragmentShader = getShader(gl, "shader-fs");
-        var vertexShader = getShader(gl, "shader-vs");
+        var fragmentShader = getShader(gl, "per-fragment-lighting-fs");
+        var vertexShader = getShader(gl, "per-fragment-lighting-vs");
 
         shaderProgram = gl.createProgram();
         gl.attachShader(shaderProgram, vertexShader);
@@ -132,20 +158,24 @@
         shaderProgram.vertexPositionAttribute = gl.getAttribLocation(shaderProgram, "aVertexPosition");
         gl.enableVertexAttribArray(shaderProgram.vertexPositionAttribute);
 
-        shaderProgram.textureCoordAttribute = gl.getAttribLocation(shaderProgram, "aTextureCoord");
-        gl.enableVertexAttribArray(shaderProgram.textureCoordAttribute);
-
         shaderProgram.vertexNormalAttribute = gl.getAttribLocation(shaderProgram, "aVertexNormal");
         gl.enableVertexAttribArray(shaderProgram.vertexNormalAttribute);
+
+        shaderProgram.textureCoordAttribute = gl.getAttribLocation(shaderProgram, "aTextureCoord");
+        gl.enableVertexAttribArray(shaderProgram.textureCoordAttribute);
 
         shaderProgram.pMatrixUniform = gl.getUniformLocation(shaderProgram, "uPMatrix");
         shaderProgram.mvMatrixUniform = gl.getUniformLocation(shaderProgram, "uMVMatrix");
         shaderProgram.nMatrixUniform = gl.getUniformLocation(shaderProgram, "uNMatrix");
         shaderProgram.samplerUniform = gl.getUniformLocation(shaderProgram, "uSampler");
+        shaderProgram.materialShininessUniform = gl.getUniformLocation(shaderProgram, "uMaterialShininess");
+        shaderProgram.showSpecularHighlightsUniform = gl.getUniformLocation(shaderProgram, "uShowSpecularHighlights");
+        shaderProgram.useTexturesUniform = gl.getUniformLocation(shaderProgram, "uUseTextures");
         shaderProgram.useLightingUniform = gl.getUniformLocation(shaderProgram, "uUseLighting");
         shaderProgram.ambientColorUniform = gl.getUniformLocation(shaderProgram, "uAmbientColor");
         shaderProgram.pointLightingLocationUniform = gl.getUniformLocation(shaderProgram, "uPointLightingLocation");
-        shaderProgram.pointLightingColorUniform = gl.getUniformLocation(shaderProgram, "uPointLightingColor");
+        shaderProgram.pointLightingSpecularColorUniform = gl.getUniformLocation(shaderProgram, "uPointLightingSpecularColor");
+        shaderProgram.pointLightingDiffuseColorUniform = gl.getUniformLocation(shaderProgram, "uPointLightingDiffuseColor");
     }
 
 
@@ -161,23 +191,23 @@
     }
 
 
-    var moonTexture;
-    var crateTexture;
+    var earthTexture;
+    var galvanizedTexture;
 
     function initTextures() {
-        moonTexture = gl.createTexture();
-        moonTexture.image = new Image();
-        moonTexture.image.onload = function () {
-            handleLoadedTexture(moonTexture)
+        earthTexture = gl.createTexture();
+        earthTexture.image = new Image();
+        earthTexture.image.onload = function () {
+            handleLoadedTexture(earthTexture)
         }
-        moonTexture.image.src = "moon.gif";
+        earthTexture.image.src = "earth.jpg";
 
-        crateTexture = gl.createTexture();
-        crateTexture.image = new Image();
-        crateTexture.image.onload = function () {
-            handleLoadedTexture(crateTexture)
+        galvanizedTexture = gl.createTexture();
+        galvanizedTexture.image = new Image();
+        galvanizedTexture.image.onload = function () {
+            handleLoadedTexture(galvanizedTexture)
         }
-        crateTexture.image.src = "crate.gif";
+        galvanizedTexture.image.src = "arroway.de_metal+structure+06_d100_flat.jpg";
     }
 
 
@@ -208,250 +238,72 @@
         gl.uniformMatrix3fv(shaderProgram.nMatrixUniform, false, normalMatrix);
     }
 
-
     function degToRad(degrees) {
         return degrees * Math.PI / 180;
     }
 
 
-    var cubeVertexPositionBuffer;
-    var cubeVertexNormalBuffer;
-    var cubeVertexTextureCoordBuffer;
-    var cubeVertexIndexBuffer;
+    var teapotVertexPositionBuffer;
+    var teapotVertexNormalBuffer;
+    var teapotVertexTextureCoordBuffer;
+    var teapotVertexIndexBuffer;
 
-    var moonVertexPositionBuffer;
-    var moonVertexNormalBuffer;
-    var moonVertexTextureCoordBuffer;
-    var moonVertexIndexBuffer;
+    function handleLoadedTeapot(teapotData) {
+        teapotVertexNormalBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, teapotVertexNormalBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(teapotData.vertexNormals), gl.STATIC_DRAW);
+        teapotVertexNormalBuffer.itemSize = 3;
+        teapotVertexNormalBuffer.numItems = teapotData.vertexNormals.length / 3;
 
-    function initBuffers() {
-        cubeVertexPositionBuffer = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, cubeVertexPositionBuffer);
-        vertices = [
-            // Front face
-            -1.0, -1.0,  1.0,
-             1.0, -1.0,  1.0,
-             1.0,  1.0,  1.0,
-            -1.0,  1.0,  1.0,
+        teapotVertexTextureCoordBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, teapotVertexTextureCoordBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(teapotData.vertexTextureCoords), gl.STATIC_DRAW);
+        teapotVertexTextureCoordBuffer.itemSize = 2;
+        teapotVertexTextureCoordBuffer.numItems = teapotData.vertexTextureCoords.length / 2;
 
-            // Back face
-            -1.0, -1.0, -1.0,
-            -1.0,  1.0, -1.0,
-             1.0,  1.0, -1.0,
-             1.0, -1.0, -1.0,
+        teapotVertexPositionBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, teapotVertexPositionBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(teapotData.vertexPositions), gl.STATIC_DRAW);
+        teapotVertexPositionBuffer.itemSize = 3;
+        teapotVertexPositionBuffer.numItems = teapotData.vertexPositions.length / 3;
 
-            // Top face
-            -1.0,  1.0, -1.0,
-            -1.0,  1.0,  1.0,
-             1.0,  1.0,  1.0,
-             1.0,  1.0, -1.0,
+        teapotVertexIndexBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, teapotVertexIndexBuffer);
+        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(teapotData.indices), gl.STATIC_DRAW);
+        teapotVertexIndexBuffer.itemSize = 1;
+        teapotVertexIndexBuffer.numItems = teapotData.indices.length;
 
-            // Bottom face
-            -1.0, -1.0, -1.0,
-             1.0, -1.0, -1.0,
-             1.0, -1.0,  1.0,
-            -1.0, -1.0,  1.0,
-
-            // Right face
-             1.0, -1.0, -1.0,
-             1.0,  1.0, -1.0,
-             1.0,  1.0,  1.0,
-             1.0, -1.0,  1.0,
-
-            // Left face
-            -1.0, -1.0, -1.0,
-            -1.0, -1.0,  1.0,
-            -1.0,  1.0,  1.0,
-            -1.0,  1.0, -1.0
-        ];
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
-        cubeVertexPositionBuffer.itemSize = 3;
-        cubeVertexPositionBuffer.numItems = 24;
-
-        cubeVertexNormalBuffer = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, cubeVertexNormalBuffer);
-        var vertexNormals = [
-            // Front face
-             0.0,  0.0,  1.0,
-             0.0,  0.0,  1.0,
-             0.0,  0.0,  1.0,
-             0.0,  0.0,  1.0,
-
-            // Back face
-             0.0,  0.0, -1.0,
-             0.0,  0.0, -1.0,
-             0.0,  0.0, -1.0,
-             0.0,  0.0, -1.0,
-
-            // Top face
-             0.0,  1.0,  0.0,
-             0.0,  1.0,  0.0,
-             0.0,  1.0,  0.0,
-             0.0,  1.0,  0.0,
-
-            // Bottom face
-             0.0, -1.0,  0.0,
-             0.0, -1.0,  0.0,
-             0.0, -1.0,  0.0,
-             0.0, -1.0,  0.0,
-
-            // Right face
-             1.0,  0.0,  0.0,
-             1.0,  0.0,  0.0,
-             1.0,  0.0,  0.0,
-             1.0,  0.0,  0.0,
-
-            // Left face
-            -1.0,  0.0,  0.0,
-            -1.0,  0.0,  0.0,
-            -1.0,  0.0,  0.0,
-            -1.0,  0.0,  0.0,
-        ];
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertexNormals), gl.STATIC_DRAW);
-        cubeVertexNormalBuffer.itemSize = 3;
-        cubeVertexNormalBuffer.numItems = 24;
-
-        cubeVertexTextureCoordBuffer = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, cubeVertexTextureCoordBuffer);
-        var textureCoords = [
-            // Front face
-            0.0, 0.0,
-            1.0, 0.0,
-            1.0, 1.0,
-            0.0, 1.0,
-
-            // Back face
-            1.0, 0.0,
-            1.0, 1.0,
-            0.0, 1.0,
-            0.0, 0.0,
-
-            // Top face
-            0.0, 1.0,
-            0.0, 0.0,
-            1.0, 0.0,
-            1.0, 1.0,
-
-            // Bottom face
-            1.0, 1.0,
-            0.0, 1.0,
-            0.0, 0.0,
-            1.0, 0.0,
-
-            // Right face
-            1.0, 0.0,
-            1.0, 1.0,
-            0.0, 1.0,
-            0.0, 0.0,
-
-            // Left face
-            0.0, 0.0,
-            1.0, 0.0,
-            1.0, 1.0,
-            0.0, 1.0,
-        ];
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(textureCoords), gl.STATIC_DRAW);
-        cubeVertexTextureCoordBuffer.itemSize = 2;
-        cubeVertexTextureCoordBuffer.numItems = 24;
-
-        cubeVertexIndexBuffer = gl.createBuffer();
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, cubeVertexIndexBuffer);
-        var cubeVertexIndices = [
-            0, 1, 2,      0, 2, 3,    // Front face
-            4, 5, 6,      4, 6, 7,    // Back face
-            8, 9, 10,     8, 10, 11,  // Top face
-            12, 13, 14,   12, 14, 15, // Bottom face
-            16, 17, 18,   16, 18, 19, // Right face
-            20, 21, 22,   20, 22, 23  // Left face
-        ];
-        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(cubeVertexIndices), gl.STATIC_DRAW);
-        cubeVertexIndexBuffer.itemSize = 1;
-        cubeVertexIndexBuffer.numItems = 36;
-
-
-        var latitudeBands = 30;
-        var longitudeBands = 30;
-        var radius = 2;
-
-        var vertexPositionData = [];
-        var normalData = [];
-        var textureCoordData = [];
-        for (var latNumber=0; latNumber <= latitudeBands; latNumber++) {
-            var theta = latNumber * Math.PI / latitudeBands;
-            var sinTheta = Math.sin(theta);
-            var cosTheta = Math.cos(theta);
-
-            for (var longNumber=0; longNumber <= longitudeBands; longNumber++) {
-                var phi = longNumber * 2 * Math.PI / longitudeBands;
-                var sinPhi = Math.sin(phi);
-                var cosPhi = Math.cos(phi);
-
-                var x = cosPhi * sinTheta;
-                var y = cosTheta;
-                var z = sinPhi * sinTheta;
-                var u = 1 - (longNumber / longitudeBands);
-                var v = 1 - (latNumber / latitudeBands);
-
-                normalData.push(x);
-                normalData.push(y);
-                normalData.push(z);
-                textureCoordData.push(u);
-                textureCoordData.push(v);
-                vertexPositionData.push(radius * x);
-                vertexPositionData.push(radius * y);
-                vertexPositionData.push(radius * z);
-            }
-        }
-
-        var indexData = [];
-        for (var latNumber=0; latNumber < latitudeBands; latNumber++) {
-            for (var longNumber=0; longNumber < longitudeBands; longNumber++) {
-                var first = (latNumber * (longitudeBands + 1)) + longNumber;
-                var second = first + longitudeBands + 1;
-                indexData.push(first);
-                indexData.push(second);
-                indexData.push(first + 1);
-
-                indexData.push(second);
-                indexData.push(second + 1);
-                indexData.push(first + 1);
-            }
-        }
-
-        moonVertexNormalBuffer = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, moonVertexNormalBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(normalData), gl.STATIC_DRAW);
-        moonVertexNormalBuffer.itemSize = 3;
-        moonVertexNormalBuffer.numItems = normalData.length / 3;
-
-        moonVertexTextureCoordBuffer = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, moonVertexTextureCoordBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(textureCoordData), gl.STATIC_DRAW);
-        moonVertexTextureCoordBuffer.itemSize = 2;
-        moonVertexTextureCoordBuffer.numItems = textureCoordData.length / 2;
-
-        moonVertexPositionBuffer = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, moonVertexPositionBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertexPositionData), gl.STATIC_DRAW);
-        moonVertexPositionBuffer.itemSize = 3;
-        moonVertexPositionBuffer.numItems = vertexPositionData.length / 3;
-
-        moonVertexIndexBuffer = gl.createBuffer();
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, moonVertexIndexBuffer);
-        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indexData), gl.STREAM_DRAW);
-        moonVertexIndexBuffer.itemSize = 1;
-        moonVertexIndexBuffer.numItems = indexData.length;
+        document.getElementById("loadingtext").textContent = "";
     }
 
 
-    var moonAngle = 180;
-    var cubeAngle = 0;
+    function loadTeapot() {
+        var request = new XMLHttpRequest();
+        request.open("GET", "Teapot.json");
+        request.onreadystatechange = function () {
+            if (request.readyState == 4) {
+                handleLoadedTeapot(JSON.parse(request.responseText));
+            }
+        }
+        request.send();
+    }
+
+
+    var teapotAngle = 180;
+
 
     function drawScene() {
         gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
+        if (teapotVertexPositionBuffer == null || teapotVertexNormalBuffer == null || teapotVertexTextureCoordBuffer == null || teapotVertexIndexBuffer == null) {
+            return;
+        }
+
         mat4.perspective(45, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0, pMatrix);
+
+        var specularHighlights = document.getElementById("specular").checked;
+        gl.uniform1i(shaderProgram.showSpecularHighlightsUniform, specularHighlights);
 
         var lighting = document.getElementById("lighting").checked;
         gl.uniform1i(shaderProgram.useLightingUniform, lighting);
@@ -471,58 +323,51 @@
             );
 
             gl.uniform3f(
-                shaderProgram.pointLightingColorUniform,
-                parseFloat(document.getElementById("pointR").value),
-                parseFloat(document.getElementById("pointG").value),
-                parseFloat(document.getElementById("pointB").value)
+                shaderProgram.pointLightingSpecularColorUniform,
+                parseFloat(document.getElementById("specularR").value),
+                parseFloat(document.getElementById("specularG").value),
+                parseFloat(document.getElementById("specularB").value)
+            );
+
+            gl.uniform3f(
+                shaderProgram.pointLightingDiffuseColorUniform,
+                parseFloat(document.getElementById("diffuseR").value),
+                parseFloat(document.getElementById("diffuseG").value),
+                parseFloat(document.getElementById("diffuseB").value)
             );
         }
 
+        var texture = document.getElementById("texture").value;
+        gl.uniform1i(shaderProgram.useTexturesUniform, texture != "none");
+
         mat4.identity(mvMatrix);
 
-        mat4.translate(mvMatrix, [0, 0, -20]);
-
-        mvPushMatrix();
-        mat4.rotate(mvMatrix, degToRad(moonAngle), [0, 1, 0]);
-        mat4.translate(mvMatrix, [5, 0, 0]);
-        gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture(gl.TEXTURE_2D, moonTexture);
-        gl.uniform1i(shaderProgram.samplerUniform, 0);
-
-        gl.bindBuffer(gl.ARRAY_BUFFER, moonVertexPositionBuffer);
-        gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, moonVertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
-
-        gl.bindBuffer(gl.ARRAY_BUFFER, moonVertexTextureCoordBuffer);
-        gl.vertexAttribPointer(shaderProgram.textureCoordAttribute, moonVertexTextureCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
-
-        gl.bindBuffer(gl.ARRAY_BUFFER, moonVertexNormalBuffer);
-        gl.vertexAttribPointer(shaderProgram.vertexNormalAttribute, moonVertexNormalBuffer.itemSize, gl.FLOAT, false, 0, 0);
-
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, moonVertexIndexBuffer);
-        setMatrixUniforms();
-        gl.drawElements(gl.TRIANGLES, moonVertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
-        mvPopMatrix();
-
-        mvPushMatrix();
-        mat4.rotate(mvMatrix, degToRad(cubeAngle), [0, 1, 0]);
-        mat4.translate(mvMatrix, [5, 0, 0]);
-        gl.bindBuffer(gl.ARRAY_BUFFER, cubeVertexPositionBuffer);
-        gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, cubeVertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
-
-        gl.bindBuffer(gl.ARRAY_BUFFER, cubeVertexNormalBuffer);
-        gl.vertexAttribPointer(shaderProgram.vertexNormalAttribute, cubeVertexNormalBuffer.itemSize, gl.FLOAT, false, 0, 0);
-
-        gl.bindBuffer(gl.ARRAY_BUFFER, cubeVertexTextureCoordBuffer);
-        gl.vertexAttribPointer(shaderProgram.textureCoordAttribute, cubeVertexTextureCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
+        mat4.translate(mvMatrix, [0, 0, -40]);
+        mat4.rotate(mvMatrix, degToRad(23.4), [1, 0, -1]);
+        mat4.rotate(mvMatrix, degToRad(teapotAngle), [0, 1, 0]);
 
         gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture(gl.TEXTURE_2D, crateTexture);
+        if (texture == "earth") {
+            gl.bindTexture(gl.TEXTURE_2D, earthTexture);
+        } else if (texture == "galvanized") {
+            gl.bindTexture(gl.TEXTURE_2D, galvanizedTexture);
+        }
         gl.uniform1i(shaderProgram.samplerUniform, 0);
 
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, cubeVertexIndexBuffer);
+        gl.uniform1f(shaderProgram.materialShininessUniform, parseFloat(document.getElementById("shininess").value));
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, teapotVertexPositionBuffer);
+        gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, teapotVertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, teapotVertexTextureCoordBuffer);
+        gl.vertexAttribPointer(shaderProgram.textureCoordAttribute, teapotVertexTextureCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, teapotVertexNormalBuffer);
+        gl.vertexAttribPointer(shaderProgram.vertexNormalAttribute, teapotVertexNormalBuffer.itemSize, gl.FLOAT, false, 0, 0);
+
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, teapotVertexIndexBuffer);
         setMatrixUniforms();
-        gl.drawElements(gl.TRIANGLES, cubeVertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
-        mvPopMatrix();
+        gl.drawElements(gl.TRIANGLES, teapotVertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
     }
 
 
@@ -533,12 +378,10 @@
         if (lastTime != 0) {
             var elapsed = timeNow - lastTime;
 
-            moonAngle += 0.05 * elapsed;
-            cubeAngle += 0.05 * elapsed;
+            teapotAngle += 0.05 * elapsed;
         }
         lastTime = timeNow;
     }
-
 
 
     function tick() {
@@ -549,11 +392,11 @@
 
 
     function webGLStart() {
-        var canvas = document.getElementById("lesson12-canvas");
+        var canvas = document.getElementById("lesson14-canvas");
         initGL(canvas);
         initShaders();
-        initBuffers();
         initTextures();
+        loadTeapot();
 
         gl.clearColor(0.0, 0.0, 0.0, 1.0);
         gl.enable(gl.DEPTH_TEST);
@@ -564,34 +407,73 @@
 </script>
 
 
+<style type="text/css">
+    #loadingtext {
+        position:absolute;
+        top:250px;
+        left:150px;
+        font-size:2em;
+        color: white;
+    }
+</style>
+
+
 </head>
 
 
 <body onload="webGLStart();">
-    <a href="http://learningwebgl.com/blog/?p=1359">&lt;&lt; Back to Lesson 12</a><br />
+    <a href="http://learningwebgl.com/blog/?p=1658">&lt;&lt; Back to Lesson 14</a><br />
 
-    <canvas id="lesson12-canvas" style="border: none;" width="500" height="500"></canvas>
-    <br />
+    <canvas id="lesson14-canvas" style="border: none;" width="500" height="500"></canvas>
 
-    <input type="checkbox" id="lighting" checked /> Use lighting<br/>
+    <div id="loadingtext">Loading world...</div>
     <br/>
+
+    <input type="checkbox" id="specular" checked /> Show specular highlight<br/>
+    <input type="checkbox" id="lighting" checked /> Use lighting<br/>
+
+    Texture:
+    <select id="texture">
+        <option value="none">None</option>
+        <option selected value="galvanized">Galvanized</option>
+        <option value="earth">Earth</option>
+    </select>
+    <br/>
+
+
+    <h2>Material:</h2>
+
+    <table style="border: 0; padding: 10px;">
+        <tr>
+            <td><b>Shininess:</b>
+            <td><input type="text" id="shininess" value="32.0" />
+        </tr>
+    </table>
+
 
     <h2>Point light:</h2>
 
     <table style="border: 0; padding: 10px;">
         <tr>
             <td><b>Location:</b>
-            <td>X: <input type="text" id="lightPositionX" value="0.0" />
-            <td>Y: <input type="text" id="lightPositionY" value="0.0" />
+            <td>X: <input type="text" id="lightPositionX" value="-10.0" />
+            <td>Y: <input type="text" id="lightPositionY" value="4.0" />
             <td>Z: <input type="text" id="lightPositionZ" value="-20.0" />
         </tr>
         <tr>
-            <td><b>Colour:</b>
-            <td>R: <input type="text" id="pointR" value="0.8" />
-            <td>G: <input type="text" id="pointG" value="0.8" />
-            <td>B: <input type="text" id="pointB" value="0.8" />
+            <td><b>Specular colour:</b>
+            <td>R: <input type="text" id="specularR" value="0.8" />
+            <td>G: <input type="text" id="specularG" value="0.8" />
+            <td>B: <input type="text" id="specularB" value="0.8" />
+        </tr>
+        <tr>
+            <td><b>Diffuse colour:</b>
+            <td>R: <input type="text" id="diffuseR" value="0.8" />
+            <td>G: <input type="text" id="diffuseG" value="0.8" />
+            <td>B: <input type="text" id="diffuseB" value="0.8" />
         </tr>
     </table>
+
 
     <h2>Ambient light:</h2>
 
@@ -605,11 +487,10 @@
     </table>
     <br/>
 
-    Moon texture courtesy of <a href="http://maps.jpl.nasa.gov/">the Jet Propulsion Laboratory</a>.
-    <br/>
-    <br/>
+    Galvanized texture courtesy of <a href="http://www.arroway-textures.com/">Arroway Textures</a>.<br/>
+    Earth texture courtesy of <a href="http://www.esa.int/esaEO/SEMGSY2IU7E_index_0.html">the European Space Agency/Envisat</a>.<br/><br/>
 
-    <a href="http://learningwebgl.com/blog/?p=1359">&lt;&lt; Back to Lesson 12</a><br />
+    <a href="http://learningwebgl.com/blog/?p=1658">&lt;&lt; Back to Lesson 14</a><br />
 
     <!-- Google Analytics stuff, please ignore - nothing to do with WebGL :-) -->
     <script type="text/javascript">

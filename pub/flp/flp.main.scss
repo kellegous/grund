@@ -1,0 +1,136 @@
+$margin: 50px;
+
+html {
+  background: url('carbon_fibre.png');
+}
+
+body {
+  font-family: Raleway;
+}
+
+@-webkit-keyframes flippy {
+  0% {
+    -webkit-transform: rotateY(0deg);
+    margin: 0;
+  }
+  35% {
+    -webkit-transform: rotateY(0deg);
+    margin: $margin;
+  }
+  65% {
+    -webkit-transform: rotateY(180deg);
+    margin: $margin;
+  }
+  100% {
+    -webkit-transform: rotateY(180deg);
+    margin: 0;
+  }
+}
+
+@-webkit-keyframes yppilf {
+  0% {
+    -webkit-transform: rotateY(180deg);
+    margin: 0;
+  }
+  35% {
+    -webkit-transform: rotateY(180deg);
+    margin: $margin;
+  }
+  65% {
+    -webkit-transform: rotateY(0deg);
+    margin: $margin;
+  }
+  100% {
+    -webkit-transform: rotateY(0deg);
+    margin: 0;
+  }
+}
+
+#root {
+  -webkit-perspective: 1000;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+#flip {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  margin: 0;
+
+  -webkit-animation-duration: 1.5s;
+  -webkit-transform-style: preserve-3d;
+  -webkit-animation-timing-function: ease-in-out;
+  -webkit-animation-fill-mode: both;
+
+  &.enflip {
+    -webkit-animation-name: flippy;
+  }
+  &.deflip {
+    -webkit-animation-name: yppilf;
+  }
+}
+
+@mixin panel {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #fff;
+  box-shadow: 0 0 20px rgba(0,0,0,0.3);
+  border-radius: 4px;
+
+  -webkit-backface-visibility: hidden;
+
+  h1 {
+    text-align: center;
+    font-size: 200px;
+    line-height: 500px;
+    text-shadow: 0 0 10px rgba(0,0,0,0.3);
+    background-color: rgba(255, 255, 255, 0.95);
+    width: 800px;
+    height: 500px;
+    border-radius: 4px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.9);
+    margin: 150px auto;
+    position: relative;
+
+    >.flp {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      background: url(flp.png) no-repeat 50% 50%;
+      background-size: 32px 32px;
+      width: 42px;
+      height: 42px;
+      opacity: 0.5;
+      cursor: pointer;
+
+      &:hover {
+        opacity: 1.0;
+      }
+    }
+  }
+}
+
+#f, #r {
+  @include panel;
+}
+
+#r {
+  -webkit-transform: rotateY(180deg);
+  background: url(bk.jpg) no-repeat top left;
+  background-size: cover;
+}
+
+#f {
+  z-index: 2;
+  background: url(fr.jpg) no-repeat top left;
+  background-size: cover;
+}

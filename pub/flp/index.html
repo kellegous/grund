@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>flp</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <link href="flp.css" rel="stylesheet">
+  <link href='http://fonts.googleapis.com/css?family=Raleway:400,100,200'
+      rel='stylesheet' type='text/css'>
+</head>
+<body>
+  
+  <div id="root">
+    <div id="flip">
+      <div id="f">
+        <h1>
+          front
+          <div class="flp"></div>
+        </h1>
+      </div>
+      
+      <div id="r">
+        <h1>
+          back
+          <div class="flp"></div>
+        </h1>
+      </div>
+    </div>
+  </div>
+
+  <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.0/jquery.min.js">
+  </script>
+  <script type="text/javascript">
+    $('.flp').on('click', function(e) {
+      var flp = $('#flip');
+      if (flp.hasClass('enflip')) {
+        flp.removeClass('enflip')
+          .addClass('deflip');
+      } else {
+        flp.removeClass('deflip')
+          .addClass('enflip');
+      }
+    });
+  </script>
+</body>
+</html>

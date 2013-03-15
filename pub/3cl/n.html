@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>3cl - n</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <link href='http://fonts.googleapis.com/css?family=Raleway:400,100,200'
+      rel='stylesheet' type='text/css'>
+  <style>
+  body {
+    font-family: HelveticaNeue-Light;
+    background-color: #000;
+    color: #fff;
+  }
+  #c {
+    margin: 40px auto 0 auto;
+    display: block;
+  }
+  #control {
+    width: 500px;
+    margin: 0 auto;
+  }
+  #control input[type="text"] {
+    font-family: HelveticaNeue-Light;
+    background-color: rgba(51, 51, 51, 0.5);
+    color: #fff;
+    border: none;
+    width: 5em;
+    text-align: right;
+    font-size: 20px;
+    padding: 4px;
+    outline: none;
+    padding-right: 10px;
+  }
+  #control h1 {
+    margin: 60px 0 20px 0;
+    padding: 0 0 5px 0;
+    font-weight: normal;
+    border-bottom: 1px dotted #333;
+    font-size: 20px;
+  }
+  #control h2 {
+    font-weight: normal;
+    font-size: 20px;
+    display: inline-block;
+    margin: 0;
+    padding: 0;
+    width: 6em;
+  }
+  #point label, #ambient label, #material label {
+    position: absolute;
+    font-size: 16px;
+    padding: 2px 0 0 8px;
+    pointer-events: none;
+    color: #f90;
+  }
+  #enable-lighting, #enable-specular {
+    text-align: center;
+    border-bottom: 1px dotted #333;
+    font-size: 20px;
+    height: 0.6em;
+  }
+  #enable-lighting > span, #enable-specular > span {
+    background-color: #000;
+    display: inline-block;
+    width: 8em;
+  }
+  #enable-specular {
+    margin-top: 40px;
+  }
+  #select-texture {
+    margin-top: 40px;
+  }
+  #texture {
+    width: 376px;
+    font-size: 20px;
+  }
+  </style>
+</head>
+<body>
+  <canvas id="c" width="500" height="500"></canvas>
+
+  <div id="control">
+    <div id="enable-lighting">
+      <span>
+        <input type="checkbox" id="lighting" checked>
+        <label for="lighting">lighting</label>
+      </span>
+    </div>
+
+    <div id="enable-specular">
+      <span>
+        <input type="checkbox" id="specular" checked>
+        <label for="specular">specular</label>
+      </span>
+    </div>
+
+    <div id="select-texture">
+      <h2>texture</h2>
+      <select id="texture">
+        <option value="none">none</option>
+        <option value="galvanized" selected>galvanized</option>
+        <option value="earth">earth</option>
+      </select>
+    </div>
+
+    <h1>material</h1>
+    <div id="material">
+      <h2>shininess</h2>
+      <label for="shininess">v</label>
+      <input type="text" id="shininess" value="32.0">
+    </div>
+
+    <h1>point light</h1>
+    <div id="point">
+      <div>
+        <h2>location</h2>
+        <label for="lightPositionX">x</label>
+        <input type="text" id="lightPositionX" value="0.0">
+        <label for="lightPositionY">y</label>
+        <input type="text" id="lightPositionY" value="0.0">
+        <label for="lightPositionZ">z</label>
+        <input type="text" id="lightPositionZ" value="-5.0">
+      </div>
+
+      <div>
+        <h2>specular</h2>
+        <label for="specularR">r</label>
+        <input type="text" id="specularR" value="0.8">
+        <label for="specularG">g</label>
+        <input type="text" id="specularG" value="0.8">
+        <label for="specularB">b</label>
+        <input type="text" id="specularB" value="0.8">
+      </div>
+
+      <div>
+        <h2>diffuse</h2>
+        <label for="diffuseR">r</label>
+        <input type="text" id="diffuseR" value="0.8">
+        <label for="diffuseG">g</label>
+        <input type="text" id="diffuseG" value="0.8">
+        <label for="diffuseB">b</label>
+        <input type="text" id="diffuseB" value="0.8">
+      </div>
+    </div>
+
+    <h1>ambient light</h1>
+    <div id="ambient">
+      <div>
+        <h2>colour</h2>
+        <label for="ambientR">r</label>
+        <input type="text" id="ambientR" value="0.2">
+        <label for="ambientG">g</label>
+        <input type="text" id="ambientG" value="0.2">
+        <label for="ambientB">b</label>
+        <input type="text" id="ambientB" value="0.2">
+      </div>
+    </div>
+  </div>
+
+  <script src="glMatrix-0.9.5.min.js"></script>
+  <script src="lib.js"></script>
+  <script src="https://www.khronos.org/registry/webgl/sdk/debug/webgl-debug.js"></script>
+
+  <script id="shader-fs" type="x-shader/x-fragment">
+    precision mediump float;
+
+    varying vec2 vTextureCoord;
+    varying vec3 vTransformedNormal;
+    varying vec4 vPosition;
+
+    uniform float uMaterialShininess;
+
+    uniform bool uShowSpecularHighlights;
+    uniform bool uUseLighting;
+    uniform bool uUseTextures;
+
+    uniform vec3 uAmbientColor;
+
+    uniform vec3 uPointLightingLocation;
+    uniform vec3 uPointLightingSpecularColor;
+    uniform vec3 uPointLightingDiffuseColor;
+
+    uniform sampler2D uSampler;
+
+    void main(void) {
+      vec3 lightWeighting;
+      if (!uUseLighting) {
+        lightWeighting = vec3(1.0, 1.0, 1.0);
+      } else {
+        vec3 lightDirection = normalize(uPointLightingLocation - vPosition.xyz);
+        vec3 normal = normalize(vTransformedNormal);
+
+        float specularLightWeighting = 0.0;
+        if (uShowSpecularHighlights) {
+          vec3 eyeDirection = normalize(-vPosition.xyz);
+          vec3 reflectionDirection = reflect(-lightDirection, normal);
+
+          specularLightWeighting = pow(max(dot(reflectionDirection, eyeDirection),
+            0.0), uMaterialShininess);
+        }
+
+        float diffuseLightWeighting = max(dot(normal, lightDirection), 0.0);
+        lightWeighting = uAmbientColor
+          + uPointLightingSpecularColor * specularLightWeighting
+          + uPointLightingDiffuseColor * diffuseLightWeighting;
+      }
+
+      vec4 fragmentColor;
+      if (uUseTextures) {
+        fragmentColor = texture2D(uSampler, vec2(vTextureCoord.s, vTextureCoord.t));
+      } else {
+        fragmentColor = vec4(1.0, 1.0, 1.0, 1.0);
+      }
+      gl_FragColor = vec4(fragmentColor.rgb * lightWeighting, fragmentColor.a);
+    }
+  </script>
+
+  <script id="shader-vs" type="x-shader/x-vertex">
+    attribute vec3 aVertexPosition;
+    attribute vec3 aVertexNormal;
+    attribute vec2 aTextureCoord;
+
+    uniform mat4 uMVMatrix;
+    uniform mat4 uPMatrix;
+    uniform mat3 uNMatrix;
+
+    varying vec2 vTextureCoord;
+    varying vec3 vTransformedNormal;
+    varying vec4 vPosition;
+
+    void main(void) {
+      vPosition = uMVMatrix * vec4(aVertexPosition, 1.0);
+      gl_Position = uPMatrix * vPosition;
+      vTextureCoord = aTextureCoord;
+      vTransformedNormal = uNMatrix * aVertexNormal;
+    }
+  </script>
+
+  <script type="text/javascript">
+    // Load a shader from an element and compile it
+    var ShaderFrom = function(gl, id) {
+      var node = document.getElementById(id);
+      var text = node.textContent;
+      var shdr = node.type == 'x-shader/x-fragment'
+        ? gl.createShader(gl.FRAGMENT_SHADER)
+        : gl.createShader(gl.VERTEX_SHADER);
+
+      gl.shaderSource(shdr, text);
+      gl.compileShader(shdr);
+
+      if (!gl.getShaderParameter(shdr, gl.COMPILE_STATUS)) {
+        throw new Error(gl.getShaderInfoLog(shdr));
+      }
+
+      return shdr;
+    };
+
+
+    var ShaderProgram = function(gl) {
+      var fs = ShaderFrom(gl, 'shader-fs'),
+          vs = ShaderFrom(gl, 'shader-vs'),
+          sp = gl.createProgram();
+
+      gl.attachShader(sp, vs);
+      gl.attachShader(sp, fs);
+      gl.linkProgram(sp);
+
+      if (!gl.getProgramParameter(sp, gl.LINK_STATUS)) {
+        throw new Error('shades!? more like hades!');
+      }
+
+      gl.useProgram(sp);
+
+      sp.vertexPositionAttribute = gl.getAttribLocation(sp, 'aVertexPosition');
+      gl.enableVertexAttribArray(sp.vertexPositionAttribute);
+
+      sp.vertexNormalAttribute = gl.getAttribLocation(sp, 'aVertexNormal');
+      gl.enableVertexAttribArray(sp.vertexNormalAttribute);
+
+      sp.textureCoordAttribute = gl.getAttribLocation(sp, 'aTextureCoord');
+      gl.enableVertexAttribArray(sp.textureCoordAttribute);
+
+      sp.pMatrixUniform = gl.getUniformLocation(sp, 'uPMatrix');
+      sp.mvMatrixUniform = gl.getUniformLocation(sp, 'uMVMatrix');
+      sp.nMatrixUniform = gl.getUniformLocation(sp, 'uNMatrix');
+      sp.samplerUniform = gl.getUniformLocation(sp, 'uSampler');
+      sp.materialShininessUniform = gl.getUniformLocation(sp, 'uMaterialShininess');
+      sp.showSpecularHighlightsUniform = gl.getUniformLocation(sp,
+        'uShowSpecularHighlights');
+      sp.useTexturesUniform = gl.getUniformLocation(sp, 'uUseTextures');
+      sp.useLightingUniform = gl.getUniformLocation(sp, 'uUseLighting');
+      sp.ambientColorUniform = gl.getUniformLocation(sp, 'uAmbientColor');
+      sp.pointLightingLocationUniform = gl.getUniformLocation(sp,
+        'uPointLightingLocation');
+      sp.pointLightingSpecularColorUniform = gl.getUniformLocation(sp,
+        'uPointLightingSpecularColor');
+      sp.pointLightingDiffuseColorUniform = gl.getUniformLocation(sp,
+        'uPointLightingDiffuseColor');
+
+      return sp;
+    };
+
+
+    var LoadTextures = function(gl, urls, cb) {
+      var n = Lib.keys(urls).length, texs = {};
+      Lib.forEach(urls, function(key, val) {
+        var tex = gl.createTexture();
+        texs[key] = tex;
+        tex.image = new Image;
+        tex.image.addEventListener('load', function(e) {
+          gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+          gl.bindTexture(gl.TEXTURE_2D, tex);
+          gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE,
+            tex.image);
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER,
+            gl.LINEAR_MIPMAP_NEAREST);
+          gl.generateMipmap(gl.TEXTURE_2D);
+          gl.bindTexture(gl.TEXTURE_2D, null);
+          n--;
+          if (n == 0) {
+            cb(texs);
+          }
+        }, false);
+        tex.image.src = val;
+      });
+    };
+
+
+
+    var Teapot = function(gl, cb) {
+      var xhr = new XMLHttpRequest;
+      xhr.open('GET', 'teapot.json');
+      xhr.onreadystatechange = function() {
+        if (xhr.readyState == 4) {
+          var data = JSON.parse(xhr.responseText);
+
+          var tvnb = gl.createBuffer();
+          gl.bindBuffer(gl.ARRAY_BUFFER, tvnb);
+          gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data.vertexNormals),
+            gl.STATIC_DRAW);
+          tvnb.itemSize = 3;
+          tvnb.numItems = data.vertexNormals.length / 3;
+
+          var tvtb = gl.createBuffer();
+          gl.bindBuffer(gl.ARRAY_BUFFER, tvtb);
+          gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data.vertexTextureCoords),
+            gl.STATIC_DRAW);
+          tvtb.itemSize = 2;
+          tvtb.numItems = data.vertexTextureCoords.length / 2;
+
+          var tvpb = gl.createBuffer();
+          gl.bindBuffer(gl.ARRAY_BUFFER, tvpb);
+          gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data.vertexPositions),
+            gl.STATIC_DRAW);
+          tvpb.itemSize = 3;
+          tvpb.numItems = data.vertexPositions.length / 3;
+
+          var tvib = gl.createBuffer();
+          gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, tvib);
+          gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(data.indices),
+            gl.STATIC_DRAW);
+          tvib.itemSize = 1;
+          tvib.numItems = data.indices.length;
+
+          cb({
+            tvnb: tvnb,
+            tvtb: tvtb,
+            tvpb: tvpb,
+            tvib: tvib
+          });
+        }
+      };
+      xhr.send();
+    };
+
+
+    var SetMatrixUniforms = function(gl, sp) {
+      gl.uniformMatrix4fv(sp.pMatrixUniform, false, pMatrix);
+      gl.uniformMatrix4fv(sp.mvMatrixUniform, false, mvMatrix);
+
+      var normalMatrix = mat3.create();
+      mat4.toInverseMat3(mvMatrix, normalMatrix);
+      mat3.transpose(normalMatrix);
+      gl.uniformMatrix3fv(sp.nMatrixUniform, false, normalMatrix);
+    };
+
+
+    var TickDidTock = function() {
+      requestAnimationFrame(TickDidTock);
+
+      gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
+      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+      mat4.perspective(45, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0, pMatrix);
+
+      gl.uniform1i(sp.showSpecularHighlightsUniform,
+        document.getElementById('specular').checked);
+
+      var lighting = document.getElementById('lighting').checked;
+      gl.uniform1i(sp.useLightingUniform, lighting);
+      if (lighting) {
+        gl.uniform3f(
+          sp.ambientColorUniform,
+          parseFloat(document.getElementById("ambientR").value),
+          parseFloat(document.getElementById("ambientG").value),
+          parseFloat(document.getElementById("ambientB").value));
+
+        gl.uniform3f(
+          sp.pointLightingLocationUniform,
+          parseFloat(document.getElementById("lightPositionX").value),
+          parseFloat(document.getElementById("lightPositionY").value),
+          parseFloat(document.getElementById("lightPositionZ").value));
+
+        gl.uniform3f(
+          sp.pointLightingSpecularColorUniform,
+          parseFloat(document.getElementById("specularR").value),
+          parseFloat(document.getElementById("specularG").value),
+          parseFloat(document.getElementById("specularB").value));
+
+        gl.uniform3f(
+          sp.uPointLightingDiffuseColor,
+          parseFloat(document.getElementById("diffuseR").value),
+          parseFloat(document.getElementById("diffuseG").value),
+          parseFloat(document.getElementById("diffuseB").value));
+      }
+
+      var texture = document.getElementById('texture').value;
+      gl.uniform1i(sp.useTexturesUniform, texture !== 'none');
+
+      mat4.identity(mvMatrix);
+
+      mat4.translate(mvMatrix, [0, 0, -40]);
+      mat4.rotate(mvMatrix, Math.PI * 23.4 / 180.0, [1, 0, -1]);
+      mat4.rotate(mvMatrix, angle, [0, 1, 0]);
+
+      // right here.
+
+
+      var now = Date.now();
+      if (lastTime != 0) {
+        var elapsed = now - lastTime;
+        angle += elapsed * Math.PI / 3600;
+      }
+      lastTime = now;
+    };
+
+
+    var canvas = document.querySelector('#c'),
+        gl = c.getContext('experimental-webgl'),
+        sp = ShaderProgram(gl),
+        lastTime = 0,
+        angle = Math.PI,
+        pMatrix = mat4.create(),
+        mvMatrix = mat4.create(),
+        textures,
+        buffers;
+
+    gl.viewportWidth = canvas.width;
+    gl.viewportHeight = canvas.height;
+
+    LoadTextures(gl, {
+        galvanized: 'arroway.de_metal+structure+06_d100_flat.jpg',
+        earth: 'earth.jpg'
+      }, function(texs) {
+        textures = texs;
+        Teapot(gl, function(bufs) {
+          buffer = bufs;
+          console.log(texs, bufs);
+
+          gl.clearColor(0.0, 0.0, 0.0, 1.0);
+          gl.enable(gl.DEPTH_TEST);
+
+          TickDidTock();
+        });
+      });
+
+    console.log(gl, sp);
+  </script>
+</body>
+</html>
