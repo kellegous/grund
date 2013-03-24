@@ -1,0 +1,70 @@
+body {
+  font-family: HelveticaNueueLight, Helvetica, sans-serif;
+}
+
+.dropper {
+  position: absolute;
+  top: 0;
+  left: 0;
+  margin-top: -220px;
+  margin-left: -100px;
+  -webkit-transform-origin: 50% 100%;
+
+  > canvas {
+    border-radius: 8px;
+    border: 1px solid #333;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.4);
+  }
+
+  > .arrow {
+    overflow: hidden;
+    text-align: center;
+    height: 13px;
+    margin-top: -4px;
+
+    div {
+      -webkit-transform: rotate(45deg);
+      width: 20px;
+      height: 20px;
+      background-color: #333;
+      margin-left: 91px;
+      margin-top: -11px;
+    }
+  }
+}
+
+#ctrl {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  background-color: rgba(0,0,0,0.4);
+  padding: 20px;
+  text-align: center;
+
+  > button {
+    font-family: HelveticaNueueLight, Helvetica, sans-serif;
+    border: none;
+    display: inline-block;
+    background-color: #179;
+    color: #eee;
+    padding: 10px 20px;
+    text-align: center;
+    font-size: 12px;
+    border-radius: 2px;
+    width: 180px;
+    margin-left: 20px;
+    text-shadow: 0 -1px 0 rgba(0,0,0,0.5);
+
+    &:hover {
+      color: #fff;
+    }
+
+    &:active {
+      background-color: #068;
+      color: #ddd;
+      box-shadow: inset 1px -1px 1px rgba(0,0,0,0.3);
+    }
+  }
+}
