@@ -1,5 +1,32 @@
 /// <reference path="../../lib/jquery.d.ts" />
 /// <reference path="common.ts" />
+
+// standard raf polyfill
+(function() {
+  var lastTime = 0;
+  var vendors = ['ms', 'moz', 'webkit', 'o'];
+  
+  for(var x = 0; x < vendors.length && !window.requestAnimationFrame; ++x) {
+    window.requestAnimationFrame = window[vendors[x]+'RequestAnimationFrame'];
+    window.cancelAnimationFrame = window[vendors[x]+'CancelAnimationFrame']
+        || window[vendors[x]+'CancelRequestAnimationFrame'];
+  }
+  
+  if (!window.requestAnimationFrame)
+    window['requestAnimationFrame'] = function(callback, element) {
+    var currTime = new Date().getTime();
+    var timeToCall = Math.max(0, 16 - (currTime - lastTime));
+    var id = window.setTimeout(function() { callback(currTime + timeToCall); },
+    timeToCall);
+    lastTime = currTime + timeToCall;
+    return id;
+  };
+  if (!window.cancelAnimationFrame)
+    window.cancelAnimationFrame = function(id) {
+    clearTimeout(id);
+  };
+}());
+
 module grd {
 
 interface Rect {
@@ -13,6 +40,7 @@ interface Size {
   width : number;
   height : number;
 }
+
 
 var LoadImage = function(url : string,
     whenDone : (im : HTMLImageElement) => void) : HTMLImageElement {
@@ -40,6 +68,21 @@ var Canvas = function() : CanvasRenderingContext2D {
   return canvas.get(0).getContext('2d');
 };
 
+var txRotate = function(e : JQuery, deg : number) : JQuery {
+  var t = 'rotate(' + deg + 'deg)';
+  return e.css('-webkit-transform', t)
+    .css('-moz-transform', t)
+    .css('-o-transform', t)
+    .css('-ms-transform', t);
+}
+
+var txTranslate = function(e : JQuery, tx : number, ty : number, deg : number) : JQuery {
+  var t = 'translate(' + tx + 'px,' + ty + 'px) rotate(' + deg + 'deg)';
+  return e.css('-webkit-transform', t)
+    .css('-moz-transform', t)
+    .css('-o-transform', t)
+    .css('-ms-transform', t);
+}
 
 // Returns the required source rectangle to paint an image using a 'cover'
 // strategy.
@@ -111,7 +154,7 @@ class Dropper {
   }
 
   private rotateTo(c, d) : void {
-    this.cnv.css('-webkit-transform', 'rotate(' + c + 'deg)');
+    txRotate(this.cnv, c);
     this.tRot = d;
 
     if (this.tRot - this.cRot > 180) {
@@ -132,8 +175,7 @@ class Dropper {
           magn = Math.min(rate * elapsed, Math.abs(diff));
       this.animator = -1;
       this.cRot += diff < 0 ? -magn : magn;
-      this.elm.css('-webkit-transform', 'translate(' + this.x + 'px,' + this.y + 'px)'
-        + ' rotate(' + this.cRot + 'deg)');
+      txTranslate(this.elm, this.x, this.y, this.cRot);
       if (Math.abs(this.cRot - this.tRot) > 0.1) {
         this.animator = requestAnimationFrame(f);
       }
@@ -169,8 +211,7 @@ class Dropper {
       this.rotateTo(0, 0);
     }
 
-    this.elm.css('-webkit-transform', 'translate(' + x + 'px,' + y + 'px)'
-      + ' rotate(' + this.cRot + 'deg)');
+    txTranslate(this.elm, x, y, this.cRot);
   }
 
 
