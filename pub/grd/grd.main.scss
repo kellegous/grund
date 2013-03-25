@@ -68,3 +68,48 @@ body {
     }
   }
 }
+
+#menu {
+  position: absolute;
+  width: 408px;
+  background-color: #333;
+  z-index: 3;
+  padding: 10px;
+  border-radius: 2px;
+  border: 1px solid #666;
+  -webkit-transition: -webkit-transform 300ms ease-in-out;
+  -webkit-transform-origin: 50% 100%;
+  -webkit-transform: scale(0, 0);
+
+  &.active {
+    -webkit-transform: scale(1,1);
+  }
+
+  >.pick {
+    width: 200px;
+    height: 180px;
+    background-size: cover;
+    border: 1px solid #666;
+    display: inline-block;
+    cursor: pointer;
+  }
+
+  >.nib {
+    position: absolute;
+    bottom: -25px;
+    width: 450px;
+    height: 25px;
+    overflow: hidden;
+
+    >div {
+      position: absolute;
+      background-color: #333;
+      border: 1px solid #666;
+      -webkit-transform: rotate(45deg);
+      top: -12px;
+      left: 200px;
+      width: 24px;
+      height: 24px;
+    }
+  }
+}

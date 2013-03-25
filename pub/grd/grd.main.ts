@@ -1,4 +1,5 @@
 /// <reference path="../../lib/jquery.d.ts" />
+/// <reference path="common.ts" />
 module grd {
 
 interface Rect {
@@ -67,53 +68,6 @@ var Cover = function(src : Size, dst : Size) : Rect {
   }
 };
 
-// An overly simple Vector class
-class Vec {
-  i : number;
-  j : number;
-
-  static mag(i : number, j : number) : number {
-    return Math.sqrt(i * i + j * j);
-  }
-
-  static normalize(i : number, j : number, dst : Vec) : Vec {
-    var m = Vec.mag(i, j);
-    dst.i = i / m;
-    dst.j = j / m;
-    return dst;
-  }
-}
-
-// An overly simple rgb color model
-class Rgb {
-  r : number;
-  g : number;
-  b : number;
-
-  static set(r : number, g : number, b : number, dst : Rgb) : Rgb {
-    dst.r = r;
-    dst.g = g;
-    dst.b = b;
-    return dst;
-  }
-
-  static luminance(r : number, g : number, b : number) : number {
-    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-  }
-
-  static invert(r : number, g : number, b : number, dst : Rgb) : Rgb {
-    return Rgb.set(255-r, 255-g, 255-b, dst);
-  }
-
-  static gray(r : number, g : number, b : number, dst : Rgb) : Rgb {
-    var l = Rgb.luminance(r, g, b);
-    return Rgb.set(l, l, l, dst);
-  }
-
-  static css(r : number, g : number, b : number) : string {
-    return 'rgb(' + (r|0) + ',' + (g|0) + ',' + (b|0) + ')';
-  }
-}
 
 var DROPPER_WIDTH = 200;
 var DROPPER_HEIGHT = 200;
@@ -128,6 +82,7 @@ class Dropper {
   private x : number;
   private y : number;
   private sz : Size;
+  private showing = true;
 
   private cRot : number = 0;
   private tRot : number = 0;
@@ -157,11 +112,14 @@ class Dropper {
 
   private rotateTo(c, d) : void {
     this.cnv.css('-webkit-transform', 'rotate(' + c + 'deg)');
-    if (Math.abs(d - this.cRot) > 180) {
-      d += 360;
+    this.tRot = d;
+
+    if (this.tRot - this.cRot > 180) {
+      this.cRot += 360;
+    } else if (this.tRot - this.cRot < -180) {
+      this.cRot -= 360;
     }
 
-    this.tRot = d;
     if (this.animator != -1) {
       return;
     }
@@ -196,35 +154,39 @@ class Dropper {
     if (t && l) {
       this.rotateTo(180, 135);
     } else if (t && r) {
-      this.rotateTo(180, -135);
+      this.rotateTo(180, 225);
     } else if (b && l) {
       this.rotateTo(0, 45);
     } else if (b && r) {
-      this.rotateTo(0, -45);
+      this.rotateTo(0, 315);
     } else if (t) {
       this.rotateTo(180, 180);
     } else if (l) {
       this.rotateTo(-90, 90);
     } else if (r) {
-      this.rotateTo(90, -90);
+      this.rotateTo(90, 270);
     } else {
       this.rotateTo(0, 0);
     }
 
-    // off the top?
-    if (y - this.sz.height < 0) {
-      console.log('off the top');
-    }
     this.elm.css('-webkit-transform', 'translate(' + x + 'px,' + y + 'px)'
       + ' rotate(' + this.cRot + 'deg)');
   }
 
 
   show() : void {
+    if (this.showing) {
+      return;
+    }
+    this.showing = true;
     this.elm.fadeIn(200);
   }
 
   hide() : void {
+    if (!this.showing) {
+      return;
+    }
+    this.showing = false;
     this.elm.fadeOut(200);
   }
 
@@ -315,19 +277,6 @@ class Signal {
 }
 
 
-// sobel filter kenels
-var Dx = [
-  [-1,  0,  1],
-  [-2,  0,  2],
-  [-1,  0,  1]
-];
-
-var Dy = [
-  [-1, -2, -1],
-  [ 0,  0,  0],
-  [ 1,  2,  1]
-];
-
 class Model {
   image : HTMLImageElement;
   data  : ImageData;
@@ -347,28 +296,9 @@ class Model {
     return Rgb.set(px[ix], px[ix + 1], px[ix + 2], dst);
   }
 
-  private kernel(x : number, y : number, k : number[][], c : Rgb) : number {
-    var s = 0,
-        w = this.width(),
-        h = this.height();
-    for (var j = 0; j < 3; j++) {
-      for (var i = 0; i < 3; i++) {
-        var sx = x + i - 1,
-            sy = y + j - 1;
-        if (sx >= w || sx < 0 || sy >= h || sy < 0) {
-          continue;
-        }
-        this.colorAt(x + i - 1, y + j - 1, c);
-        s += k[i][j] * Rgb.luminance(c.r, c.g, c.b);
-      }
-    }
-    return s * 0.25;
-  }
-
   gradientAt(x : number, y : number, dst : Vec) : Vec {
-    var c = new Rgb;
-    dst.j = -this.kernel(x, y, Dx, c);
-    dst.i = -this.kernel(x, y, Dy, c);
+    dst.j = -convolve(this.data, x, y, Dx) * 0.25;
+    dst.i = -convolve(this.data, x, y, Dy) * 0.25;
     return dst;
   }
 
@@ -394,79 +324,224 @@ class Model {
   }
 }
 
-var setupControls = (ctx : CanvasRenderingContext2D, model : Model) => {
-  var ctrlActive = false,
-      dropperActive = true;
 
-  $('#ctrl')
-    .on('mouseover', (e) => {
-      ctrlActive = true;
-      dropper.hide();
-    })
-    .on('mouseout', (e) => {
-      ctrlActive = false;
-      setTimeout(() => {
-        if (ctrlActive || !dropperActive) {
-          return;
-        }
+class View {
+  private bg = new Bg;
+  private ctx = Canvas();
+  private dropper : Dropper;
 
-        dropper.show();
-      }, 0);
+  private menuShowing = false;
+  private edgesShowing = false;
+  private dropperEnabled = true;
+
+  private ctrlTop : number;
+
+  private im : HTMLImageElement;
+
+  constructor(private model : Model) {
+    this.dropper = new Dropper(model);
+
+    // listen for loads
+    model.imageDidLoad.wireTo((model) => {
+      this.imageDidLoad();
     });
 
-  $('#hide-dropper').click(function(e) {
-    dropperActive = !dropperActive;
-    $(this).text(dropperActive ? 'Hide Dropper' : 'Show Dropper');
-  });
+    // patch up the menu so that images show
+    $('#menu > .pick').each((i, e) => {
+      var j = $(e);
+      j.css('background-image', 'url(' + j.attr('data-url') + ')');
+    });
 
-  $('#mask-filter').click(function(e) {
-    var w = model.width(),
-        h = model.height(),
-        s = w * 4,
-        d = ctx.createImageData(w, h),
-        v = new Vec;
-    // the buffer is initialized to full black.
-    for (var j = 0; j < h; j++) {
-      for (var i = 0; i < w; i++) {
-        model.gradientAt(i, j, v);
-        d.data[s * j + 4 * i + 3] = Vec.mag(v.i, v.j);
+    this.ctrlTop = $('#ctrl').get(0).getBoundingClientRect().top;
+
+    // bind event handlers
+    this.bind();
+  }
+
+  paint() : void {
+    var canvas = this.ctx.canvas,
+        im = this.im,
+        w = canvas.width,
+        h = canvas.height;
+    var rect = Cover(im, canvas);
+    this.ctx.drawImage(im,
+      rect.x, rect.y, rect.w, rect.h,
+      0, 0, w, h);
+  }
+
+  imageNeedsData(im : HTMLImageElement) : ImageData {
+    var ctx = this.ctx,
+        canvas = ctx.canvas,
+        w = window.innerWidth,
+        h = window.innerHeight;
+    canvas.width = w;
+    canvas.height = h;
+    this.im = im;
+    this.paint();
+    return ctx.getImageData(0, 0, w, h);
+  }
+
+  private bind() : void {
+    var view = this;
+
+    // toggle dropper
+    $('#hide-dropper').click(function(e) {
+      var enabled = view.dropperEnabled;
+      if (enabled) {
+        view.dropperEnabled = false;
+        $(this).text('Show Dropper');
+      } else {
+        view.dropperEnabled = true;
+        $(this).text('Hide Dropper');
       }
-    }
-    console.log(d.data[0], d.data[1], d.data[2], d.data[3],
-                d.data[4], d.data[5], d.data[6], d.data[7]);
-  });
-};
+    });
 
+    // show filter
+    $('#mask-filter').click(function(e) {
+      if (view.edgesShowing) {
+        view.hideEdges();
+        $(this).text('Highlight Edges');
+      } else {
+        view.showEdges();
+        $(this).text('Restore Original');
+      }
+    });
+
+    $('#pick-image').click(function(e) {
+      if (view.menuShowing) {
+        view.hideMenu();
+      } else {
+        view.showMenu();
+      }
+    });
+
+    $('#menu').click((e) => {
+      var t = $(e.target);
+      if (!t.hasClass('pick')) {
+        return;
+      }
+
+      var url = t.attr('data-url');
+      this.model.loadFrom(url);
+      this.hideMenu();
+    });
+
+    // have the dropper track the mouse
+    $(document).on('mousemove', (e) => {
+      if (this.im == null) {
+        return;
+      }
+
+      var x = e.pageX,
+          y = e.pageY;
+      if (y >= this.ctrlTop || !this.dropperEnabled || this.menuShowing) {
+        this.dropper.hide();
+        return;
+      }
+
+      this.dropper.show();
+      this.dropper.renderAt(x, y);
+    });
+
+    // have resizes reload the model
+    $(window).on('resize', (e) => {
+      this.model.reload();
+    });
+  }
+
+  private showEdges() : void {
+    this.edgesShowing = true;
+    this.bg.cancel().submit(this.model.data, (d) => {
+      var ctx = this.ctx,
+          model = this.model,
+          w = model.width(),
+          h = model.height();
+
+      var nim = $(document.createElement('canvas'))
+        .attr('width', w)
+        .attr('height', h)
+        .get(0).getContext('2d');
+      nim.putImageData(d, 0, 0);
+
+      ctx.save();
+      ctx.drawImage(ctx.canvas, 0, 0, w, h);
+      ctx.globalCompositeOperation = 'destination-in';
+      ctx.drawImage(nim.canvas, 0, 0, w, h);
+      ctx.restore();
+    });
+  }
+
+  private hideEdges() : void {
+    this.edgesShowing = false;
+    this.paint();
+  }
+
+  private showMenu() : void {
+    // TODO(knorton): Install dismisser
+    var pr = $('#pick-image').get(0).getBoundingClientRect();
+    $('#menu').css('bottom', 100)
+      .css('left', pr.left + pr.width / 2 - 408 / 2)
+      .addClass('active');
+    this.menuShowing = true;
+  }
+
+  private hideMenu() : void {
+    $('#menu').removeClass('active');
+    this.menuShowing = false;
+  }
+
+  private imageDidLoad() : void {
+    if (this.edgesShowing) {
+      this.showEdges();
+    }
+  }
+}
+
+
+class Bg {
+  private worker : Worker = new Worker('worker.js');
+  private id : number = 0;
+  private cb : { (data : ImageData) : void; }[] = [];
+
+  constructor() {
+    this.worker.addEventListener('message', (e : MessageEvent) => {
+      var id = e.data.id;
+      var cb = this.cb[id];
+      if (!cb) {
+        return;
+      }
+
+      this.cb[id] = null;
+      cb(e.data.data);
+    });
+  }
+
+  submit(data : ImageData, cb : (data : ImageData) => void) : Bg {
+    this.cb[this.id] = cb;
+    this.worker.postMessage({
+      id: this.id,
+      data: data
+    });
+    this.id++;
+    return this;
+  }
+
+  cancel() : Bg {
+    this.cb = [];
+    return this;
+  }
+}
 
 // var IMAGE = '305742748_3d66ddddc8_o.jpg';
 // var IMAGE = 'test.jpg';
 // var IMAGE = '5773391228_821cbd4596_o.jpg';
 var IMAGE = '7800614334_54207fa424_h.jpg';
 
-var context = Canvas(),
-    model = new Model((im) => {
-      var canvas = context.canvas,
-          w = window.innerWidth,
-          h = window.innerHeight;
-      canvas.width = w;
-      canvas.height = h;
-      var rect = Cover(im, canvas);
-      context.drawImage(im,
-        rect.x, rect.y, rect.w, rect.h,
-        0, 0, w, h);
-      return context.getImageData(0, 0, w, h);
-    }),
-    dropper = new Dropper(model);
+var model = new Model((im) => {
+  return view.imageNeedsData(im);
+});
+var view = new View(model);
 
 model.loadFrom(IMAGE);
-setupControls(context, model);
-
-$(document).on('mousemove', (e) => {
-  dropper.renderAt(e.pageX, e.pageY);
-});
-
-$(window).on('resize', (e) => {
-  model.reload();
-});
 
 }
