@@ -496,6 +496,7 @@ class View {
 
   private hideEdges() : void {
     this.edgesShowing = false;
+    this.bg.cancel();
     this.paint();
   }
 
