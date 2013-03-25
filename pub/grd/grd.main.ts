@@ -280,6 +280,8 @@ class Signal {
 class Model {
   image : HTMLImageElement;
   data  : ImageData;
+
+  private desc : string;
   imageNeedsData : (im : HTMLImageElement) => ImageData;
 
   private stride : number;
@@ -302,7 +304,8 @@ class Model {
     return dst;
   }
 
-  loadFrom(url : string) : void {
+  loadFrom(url : string, desc : string) : void {
+    this.desc = desc;
     LoadImage(url, (im) => {
       this.image = im;
       this.reload();
@@ -312,7 +315,7 @@ class Model {
   reload() : void {
     this.data = this.imageNeedsData(this.image);
     this.stride = this.data.width * 4;
-    this.imageDidLoad.raise(this);
+    this.imageDidLoad.raise(this, 'http://www.flickr.com/photos/' + this.desc);
   }
 
   width() : number {
@@ -338,24 +341,46 @@ class View {
 
   private im : HTMLImageElement;
 
+  private escKey : (e : KeyboardEvent) => void;
+  private clickOut : (e : Event) => void;
+
   constructor(private model : Model) {
     this.dropper = new Dropper(model);
 
     // listen for loads
-    model.imageDidLoad.wireTo((model) => {
-      this.imageDidLoad();
+    model.imageDidLoad.wireTo((args : any[]) => {
+      this.imageDidLoad(args[0], args[1]);
     });
 
     // patch up the menu so that images show
-    $('#menu > .pick').each((i, e) => {
+    var picks = $('#menu > .pick').each((i, e) => {
       var j = $(e);
       j.css('background-image', 'url(' + j.attr('data-url') + ')');
     });
 
+
     this.ctrlTop = $('#ctrl').get(0).getBoundingClientRect().top;
+
+    this.escKey =  (e : KeyboardEvent) => {
+      if (e.keyCode != 27 /* esc */) {
+        return;
+      }
+      this.hideMenu();
+    };
+
+    this.clickOut = (e: Event) => {
+      var m = $('#menu').get(0);
+      if (m == e.target || $.contains(m, <HTMLElement>e.target)) {
+        return;
+      }
+      this.hideMenu();
+    };
 
     // bind event handlers
     this.bind();
+
+    var f = $(picks.get(0));
+    model.loadFrom(f.attr('data-url'), f.attr('data-id'));
   }
 
   paint() : void {
@@ -420,9 +445,7 @@ class View {
       if (!t.hasClass('pick')) {
         return;
       }
-
-      var url = t.attr('data-url');
-      this.model.loadFrom(url);
+      this.model.loadFrom(t.attr('data-url'), t.attr('data-id'));
       this.hideMenu();
     });
 
@@ -482,18 +505,24 @@ class View {
     $('#menu').css('bottom', 100)
       .css('left', pr.left + pr.width / 2 - 408 / 2)
       .addClass('active');
+    document.addEventListener('click', this.clickOut, true);
+    document.addEventListener('keydown', this.escKey, true);
     this.menuShowing = true;
   }
 
   private hideMenu() : void {
     $('#menu').removeClass('active');
+    document.removeEventListener('click', this.clickOut, true);
+    document.removeEventListener('keydown', this.escKey, true);
     this.menuShowing = false;
   }
 
-  private imageDidLoad() : void {
+  private imageDidLoad(model : Model, url : string) : void {
     if (this.edgesShowing) {
       this.showEdges();
     }
+
+    $('#attr').attr('href', url).text(url);
   }
 }
 
@@ -541,7 +570,5 @@ var model = new Model((im) => {
   return view.imageNeedsData(im);
 });
 var view = new View(model);
-
-model.loadFrom(IMAGE);
 
 }
