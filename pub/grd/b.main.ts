@@ -350,6 +350,9 @@ class View {
       // fucking firefox
       this.rectForMousing = this.mini.canvas.getBoundingClientRect();
 
+      // clear any edge buffer
+      this.edge = null;
+
       // paint everything
       this.paint();
 
@@ -359,7 +362,6 @@ class View {
         .text(desc);
 
       // if edges is showing, load them
-      this.edge = null;
       if (this.edgesShowing) {
         this.showEdges();
       }
