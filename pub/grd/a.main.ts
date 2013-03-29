@@ -570,7 +570,7 @@ class View {
 
 
 class Bg {
-  private worker : Worker = new Worker('worker.js');
+  private worker : Worker = new Worker('edger.js');
   private id : number = 0;
   private cb : { (data : ImageData) : void; }[] = [];
 
