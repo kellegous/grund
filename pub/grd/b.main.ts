@@ -371,8 +371,6 @@ class View {
 
     this.mini = View.uiForMini(this);
 
-    this.pulse();
-
     this.bind();
   }
 
@@ -448,6 +446,7 @@ class View {
         .get(0).getContext('2d');
       nim.putImageData(d, 0, 0);
       this.edge = nim.canvas;
+      this.paintMini();
     });
   }
 
@@ -456,6 +455,7 @@ class View {
     this.edgesShowing = false;
     this.edger.cancel();
     this.edge = null;
+    this.paintMini();
   }
 
 
@@ -477,24 +477,6 @@ class View {
   }
 
 
-  private pulse() : void {
-    var time = Date.now(),
-        model = this.model;
-    var draw = () => {
-      requestAnimationFrame(draw);
-      if (!model.image) {
-        return;
-      }
-      var elapsed = Date.now() - time;
-      var alpha = this.dragging
-        ? 1.0
-        : 0.3 + 0.7 * Math.abs(Math.sin(elapsed / 800));
-      this.paintMini(alpha);
-    };
-    requestAnimationFrame(draw);
-  }
-
-
   private scale() : number {
     return this.mini.canvas.width / this.model.image.width;
   }
@@ -509,7 +491,7 @@ class View {
   }
 
 
-  private paintMini(alpha? : number) : void {
+  private paintMini() : void {
     var c = this.mini,
         i = this.model.image,
         r = this.rect,
@@ -527,10 +509,6 @@ class View {
       c.drawImage(this.edge, 0, 0, i.width, i.height,
         0, 0, c.canvas.width, c.canvas.height);
       c.restore();
-    }
-
-    if (alpha !== undefined) {
-      c.globalAlpha = alpha;
     }
 
     c.fillStyle = 'rgba(255,255,255,0.2)';
