@@ -228,8 +228,8 @@ class Model {
   gradientAt(x : number, y : number, dst : Vec) : Vec {
     x |= 0;
     y |= 0;
-    dst.j = -convolve(this.pixels, x, y, Dx) * 0.25;
-    dst.i = -convolve(this.pixels, x, y, Dy) * 0.25;
+    dst.j = -convolve(this.pixels, x, y, Dy) * 0.25;
+    dst.i = -convolve(this.pixels, x, y, Dx) * 0.25;
     return dst;
   }
 }

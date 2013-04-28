@@ -340,8 +340,8 @@ class Model {
   }
 
   gradientAt(x : number, y : number, dst : Vec) : Vec {
-    dst.j = -convolve(this.data, x, y, Dx) * 0.25;
-    dst.i = -convolve(this.data, x, y, Dy) * 0.25;
+    dst.j = -convolve(this.data, x, y, Dy) * 0.25;
+    dst.i = -convolve(this.data, x, y, Dx) * 0.25;
     return dst;
   }
 

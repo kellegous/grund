@@ -77,7 +77,7 @@ var convolve = function(data : ImageData, x : number, y : number, k : number[][]
       var r = px[ix],
           g = px[ix + 1],
           b = px[ix + 2];
-      s += k[i][j] * Rgb.luminance(r, g, b);
+      s += k[j][i] * Rgb.luminance(r, g, b);
     }
   }
 
