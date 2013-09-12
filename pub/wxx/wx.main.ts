@@ -18,7 +18,7 @@ class Rect {
   constructor(public x : number, public y : number, public w : number, public h : number) {
   }
 
-  contains(x : number, y : number) : bool {
+  contains(x : number, y : number) : boolean {
     return x >= this.x
       && y >= this.y
       && x <= (this.x + this.w)

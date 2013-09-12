@@ -249,7 +249,7 @@ class View {
 
   rect : Rect;
 
-  dragging : bool = false;
+  dragging : boolean = false;
 
   edgesShowing = false;
 

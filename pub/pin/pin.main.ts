@@ -25,7 +25,7 @@ interface View {
   Pin : Pin;
   Elem : JQuery;
   Size : Size;
-  Used : bool;
+  Used : boolean;
 }
 
 var GridSizes = [{X : 4, Y : 1},
@@ -148,7 +148,7 @@ var GridOf = function(size : number) : (views : View[]) => void {
     }
   }
 
-  return (views : View[]) {
+  return (views : View[]) => {
     // reset the views
     views.forEach((v : View) => {
       v.Size = GridSizeOf(v.Size)
