@@ -21,7 +21,7 @@ interface View {
 interface Box {
   view : View;
   size : Size;
-  used :  bool;
+  used :  boolean;
 }
 
 var gridSizes = [{x : 4, y : 1},
@@ -136,7 +136,7 @@ var gridOf = function(size : number) : (views : View[]) => void {
     }
   }
 
-  return (views : View[]) {
+  return (views : View[]) => {
     console.log('size = ' + size);
     var boxes = views.map((v : View) => {
       return {

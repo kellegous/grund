@@ -123,6 +123,7 @@ func projects(dir string) ([]*project, error) {
 func main() {
   flagAddr := flag.String("addr", ":2018", "")
   flagData := flag.String("data", "data", "")
+  flagProd := flag.Bool("prod", false, "")
 
   flag.Parse()
 
@@ -137,14 +138,29 @@ func main() {
     panic(err)
   }
 
+  pub := filepath.Join(root, "pub")
+  c := pork.Content(pork.NewConfig(pork.None), http.Dir(pub))
+
+  if *flagProd {
+    t, err := ioutil.TempDir(os.TempDir(), "grund-")
+    if err != nil {
+      panic(err)
+    }
+
+    if _, err := c.Productionize(http.Dir(t)); err != nil {
+      panic(err)
+    }
+
+    return
+  }
+
   r := pork.NewRouter(
     func(status int, r *http.Request) {
       log.Printf("%d - %s", status, r.URL.Path)
     }, nil, nil)
 
-  pub := filepath.Join(root, "pub")
   r.Handle("/", &handler{
-    c: pork.Content(pork.NewConfig(pork.None), http.Dir(pub)),
+    c: c,
     t: filepath.Join(root, "index.tpl.html"),
     d: pub,
   })
