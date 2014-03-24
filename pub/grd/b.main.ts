@@ -189,8 +189,8 @@ class Model {
       height: window.innerHeight
     });
 
-    var w = f * original.width,
-        h = f * original.height;
+    var w = (f * original.width) | 0,
+        h = (f * original.height) | 0;
 
     var canvas = $(document.createElement('canvas'))
       .attr('width', w)
@@ -273,16 +273,16 @@ class View {
       .click((e : MouseEvent) => {
         viewAt(e);
       })
-      .on('mousedown', (e) => {
+      .on('mousedown', (e : MouseEvent) => {
         view.dragging = true;
         viewAt(e);
       })
-      .on('mousemove', (e) => {
+      .on('mousemove', (e : MouseEvent) => {
         if (view.dragging) {
           viewAt(e);
         }
       })
-      .on('mouseup', (e) => {
+      .on('mouseup', (e : MouseEvent) => {
         view.dragging = false;
       });
 
@@ -541,7 +541,8 @@ class View {
         // draw the pixel
         model.colorAt(x, y, p);
         ctx.fillStyle = Rgb.css(p.r, p.g, p.b);
-        ctx.fillRect(i * View.PIXEL_SIZE,
+        ctx.fillRect(
+          i * View.PIXEL_SIZE,
           j * View.PIXEL_SIZE,
           View.PIXEL_SIZE - 1,
           View.PIXEL_SIZE - 1);
