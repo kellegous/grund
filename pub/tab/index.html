@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>tab</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <link href='http://fonts.googleapis.com/css?family=Raleway:400,100,200'
+      rel='stylesheet' type='text/css'>
+  <style>
+  body {
+    font-family: HelveticaNeueLight;
+  }
+  #tre {
+    color: #666;
+    width: 543px;
+    margin: 50px;
+  }
+
+  #two {
+    color: #666;
+    width: 543px;
+    margin: 50px;    
+  }
+
+  #one {
+    color: #666;
+    border-left: 1px solid #999;
+    border-top: 1px solid #999;
+    width: 543px;
+    margin: 50px;
+  }
+
+  #one > .slt {
+    text-align: center;
+    color: #999;
+    border-right: 1px solid #999;
+    border-bottom: 1px solid #999;
+    width: 532px;
+    padding: 5px;
+  }
+  .row {
+  }
+
+
+  #one > .row > .c, #one > .row > .u, #one > .row > .m {
+    width: 160px;
+    display: inline-block;
+    padding: 10px;
+    border-bottom: 1px solid #999;
+    border-right: 1px solid #999;
+  }
+
+  #two > .grp > .row > .u, #two > .grp > .row > .m {
+    width: 160px;
+    display: inline-block;
+    padding: 10px;
+    border-bottom: 1px solid #999;
+    border-right: 1px solid #999;    
+  }
+
+  #one .gap > span {
+    height: 0;
+    width: 532px;
+    padding: 1px 5px;
+    border-right: 1px solid #999;
+    border-bottom: 1px solid #999;
+    display: block;
+  }
+
+  #two .gap > span {
+    height: 0;
+    width: 531px;
+    padding: 1px 5px;
+    border-right: 1px solid #999;
+    border-bottom: 1px solid #999;
+    display: block;    
+  }
+
+  #two .grp {
+    border-left: 1px solid #999;
+    border-top: 1px solid #999;
+  }
+
+  #two > .grp > .row > .u {
+    width: 340px;
+  }
+
+  #two > .slt {
+    width: 532px;
+    height: 40px;
+  }
+
+  #tre > .grp > .row > .u, #tre > .grp > .row > .m {
+    width: 160px;
+    display: inline-block;
+    padding: 10px;
+    border-bottom: 1px solid #999;
+    border-right: 1px solid #999;    
+  }
+
+  #tre > .grp > .row > .u {
+    width: 340px;
+  }
+
+  #tre .gap > span {
+    height: 0;
+    width: 531px;
+    padding: 1px 5px;
+    border-right: 1px solid #999;
+    border-bottom: 1px solid #999;
+    display: block;    
+  }
+
+  #tre .grp {
+    border-left: 1px solid #999;
+    border-top: 1px solid #999;
+  }
+
+  #tre > .slt {
+    width: 532px;
+    height: 40px;
+  }
+
+  .ca span {
+    background-color: #6cf;
+  }
+  .cb span {
+    background-color: #fc6;
+  }
+  .cc span {
+    background-color: #6fc;
+  }
+  </style>
+</head>
+<body>
+  <div id="one"></div>
+  <div id="two"></div>
+  <div id="tre"></div>
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.0/jquery.min.js">
+</script>
+<script>
+  var $e = function(name) {
+    return $(document.createElement(name));
+  };
+
+  var MakeSlot = function(root, text) {
+    $e('div').addClass('slt')
+      .text(text || '')
+      .appendTo(root);
+  };
+
+  var MakeGap = function(root, cls) {
+    $e('div').addClass('gap').addClass(cls)
+      .append($e('span'))
+      .appendTo(root);
+  };
+
+  var MakeOne = function() {
+    var MakeRows = function(root, c, u, cls) {
+      var n = u.length - 1;
+      u.forEach(function(x, i) {
+        if (i == n) {
+          MakeGap(root, cls);
+          MakeGap(root, cls);
+        }
+
+        $e('div').addClass('row')
+          .addClass(cls)
+          .append($e('span').addClass('c').text(c))
+          .append($e('span').addClass('u').text(x))
+          .append($e('span').addClass('m').text('metrics'))
+          .appendTo(root);
+      });
+    };
+
+    var c = $('#one');
+    MakeRows(c, 'campaign #1', ['user #1', 'user #2', 'user #3', 'user ...'], 'ca');
+    MakeSlot(c, 'data to be filtered out');
+    MakeRows(c, 'campaign #2', ['user #1', 'user #2', 'user #3', 'user ...'], 'cb');
+    MakeSlot(c, 'data to be filtered out');
+    MakeRows(c, 'campaign #3', ['user #1', 'user #2', 'user #3', 'user ...'], 'cc');
+  };
+
+  var MakeTwo = function() {
+    var MakeRows = function(root, u, cls) {
+      var n = u.length - 1;
+      u.forEach(function(x, i) {
+        if (i == n) {
+          MakeGap(root, cls);
+          MakeGap(root, cls);
+        }
+
+        $e('div').addClass('row')
+          .addClass(cls)
+          .append($e('span').addClass('u').text(x))
+          .append($e('span').addClass('m').text('metrics'))
+          .appendTo(root);
+      });
+    };
+    var c = $('#two');
+    MakeRows($e('div').addClass('grp').appendTo(c),
+      ['user #1', 'user #2', 'user #3', 'user ...'], 'ca');
+    MakeSlot(c);
+    MakeRows($e('div').addClass('grp').appendTo(c),
+      ['user #1', 'user #2', 'user #3', 'user ...'], 'cb');
+    MakeSlot(c);
+    MakeRows($e('div').addClass('grp').appendTo(c),
+      ['user #1', 'user #2', 'user #3', 'user ...'], 'cc');
+  };
+
+  var MakeTre = function(root, u, cls) {
+    var MakeRows = function(root, u, cls) {
+      var n = u.length - 1;
+      u.forEach(function(x, i) {
+        if (i == n) {
+          MakeGap(root, cls);
+          MakeGap(root, cls);
+        }
+
+        $e('div').addClass('row')
+          .addClass(cls)
+          .append($e('span').addClass('u').text(x))
+          .append($e('span').addClass('m').text('metrics'))
+          .appendTo(root);
+      });
+    };
+    var c = $('#tre');
+    MakeRows($e('div').addClass('grp').appendTo(c), [
+      'user #1',
+      'user #2',
+      'user #3',
+      'user #4',
+      'user #5',
+      'user ...'], 'ca');
+    MakeSlot(c);
+    MakeRows($e('div').addClass('grp').appendTo(c), [
+      'user #1',
+      'user #2',
+      'user #3',
+      'user #4',
+      'user #5',
+      'user ...'], 'cb');
+  };
+
+
+  MakeOne();
+
+  MakeTwo();
+
+  MakeTre();
+</script>
+</body>
+</html>

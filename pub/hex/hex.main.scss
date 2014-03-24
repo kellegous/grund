@@ -1,0 +1,54 @@
+body {
+  background-color: #fff;
+  font-family: Raleway;
+  background-image: url(bg.png);
+}
+
+#root {
+  width: 960px;
+  margin: 0 auto;
+}
+
+.human {
+  width: 225px;
+  height: 250px;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.2);
+  background-color: #fff;
+  display: inline-block;
+  margin: 5px;
+  position: relative;
+  color: #999;
+  text-align: center;
+
+  h1 {
+    font-size: 20px;
+    font-weight: normal;
+    margin: 0;
+    padding: 0;
+    position: absolute;
+    bottom: 10px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    text-shadow: 0 1px 0 #eee;
+  }
+
+  > .text {
+    display: none;
+  }
+
+  > .face {
+    display: inline-block;
+    width: 150px;
+    height: 150px;
+    background-size: cover;
+    border-radius: 75px;
+    margin-top: 25px;
+    border: 2px solid #eee;
+  }
+
+  > .hex {
+    margin-top: 25px;
+    display: inline-block;
+  }
+}
