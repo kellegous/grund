@@ -1,1 +1,0 @@
-an answer to a question i posed on [Google+](https://plus.google.com/u/0/108767398608071205202/posts/i4S1Rv4CquZ) one weekend when I was wondering about the degree to which humans mis-estimate expected value.
