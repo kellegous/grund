@@ -1,3 +1,0 @@
-#!/bin/bash
-
-fspub --exclude=.gitignore,publish flp
